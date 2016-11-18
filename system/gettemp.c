@@ -1,5 +1,7 @@
 #include <xinu.h>
 
+//interrupt handler?
+
 #define TSC_ADC_START 0x44e0D000
 /* 
  * All of the TSC_ADC_SS registers:
@@ -66,23 +68,10 @@
 
 #define CTRL_BASE 0x44E10000
 
+
+#define CM_WAKEUP_ADDR 0x44e00400
+#define BBIO_CM_WKUP_OFFSET_FROM_CM_PER 0xBC
 //check out DMA requests
-
-void writeReg(uint32* reg, uint32 val){
-	(*reg) = val;
-}
-
-void setReg(uint32* reg, uint32 val){
-	(*reg) |= val;
-}
-
-void clearReg(uint32* reg, uint32 val){
-	(*reg) &= val;
-}
-
-uint32 readReg(uint32* reg){
-	return (reg[0]);
-}
 
 void printHex(uint32 hex){
 	char output=0;
@@ -93,6 +82,27 @@ void printHex(uint32 hex){
 		if (output>=58) output+=7;
 		kputc(output);
 	}
+}
+
+uint32 readReg(uint32* reg){
+	return (*reg);
+}
+
+void writeReg(uint32* reg, uint32 val){
+	(*reg) = val;
+}
+
+void setReg(uint32* reg, uint32 val){
+	kprintf("setReg ");
+	printHex(reg);
+	kprintf(", ");
+	printHex(readReg(reg));
+	kprintf(":\n");
+	(*reg) |= val;
+}
+
+void clearReg(uint32* reg, uint32 val){
+	(*reg) &= val;
 }
 
 syscall inittemp(){
@@ -114,13 +124,16 @@ MOV r12,0xFFFFFFFF //reset r12 to confirm that the followin load
 //operation works
 LBBO r12,r10,0,12 //Load value from CTRL register to r10
 //The C host programm will echo the value of r10*/
-	
+
+	uint32 tmp = disable();	
 	kprintf("inittemp:\n");
 
+	kprintf("write 2 to CM_WAKEUP_ADDR+BBIO_CM_WKUP_OFFSET_FROM_CM_PER:\n");
+	*(uint32*)(CM_WAKEUP_ADDR+BBIO_CM_WKUP_OFFSET_FROM_CM_PER) = 0x2;
 	kprintf("attempting to write to ");
 	printHex(TSC_ADC_CTRL);
 	kprintf(":\n");
-	writeReg(TSC_ADC_CTRL, 0x05);
+	setReg(TSC_ADC_CTRL, 0x04);
 	kprintf("...done\n");
 	//writeReg(REVISION, 0x0);
 	kprintf("attempting to write to anything adc 2: ");
@@ -148,11 +161,16 @@ LBBO r12,r10,0,12 //Load value from CTRL register to r10
 	writeReg(STEPCONFIG15, 0x00);
 	writeReg(STEPCONFIG16, 0x00);
 	kprintf("If you're reading this, step configuration is done. 8D\n");
+
+	setReg(TSC_ADC_CTRL, 0x01);
+
+	kprintf("..enabed TSC_ADC_SS module");
 	
 	writeReg(TSC_ADC_CTRL, 0x05);
 	//setReg(STEPENABLE, 0b10);
 	//setReg(STEPCONFIG1, 0x00);
 	
+	restore(tmp);
 	return OK;
 }
 
@@ -164,6 +182,7 @@ LBBO r12,r10,0,12 //Load value from CTRL register to r10
 process TestTemp(sid32 printMutex){
 	recvclr();
 
+	
 	/*NOTE: LED is turned on by writing (out) '1' to GPIO pin (voltage turns on!). Push button is opposide and you read (in) a 1 from register to denote pushed in. */
 	/*NOTE: This is for an LED on board pin 19==GPIO0_22. Note the '0'. GPIO block 0. Note: board pin is 19, NOT 22. 22 is used for setting the bit locations for this GPIO location. Crazy*/
 	/*NOTE: You need a LED in series with a 470 ohm resistor. Path: GRND (board pin 0 or 1)->short leg (LED)->LED->resistor->3.3V (from board pin 19*/
@@ -183,7 +202,7 @@ process TestTemp(sid32 printMutex){
 		writeReg(0x44E0713C,0xFFFFFFFF);
 	}*/
 	kprintf("setting gpio to input (as a control)\n");
-	writeReg(0x44E07134, 0xFFFFFFFF);
+	setReg(0x44E07134, 0xFFFFFFFF);
 	kprintf("...done\n");
 	inittemp();
 	kprintf("setting gpio to input\n");
