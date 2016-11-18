@@ -1,6 +1,5 @@
 #include <xinu.h>
 
-//#define TSC_ADC_START 0x54C00000
 #define TSC_ADC_START 0x44e0D000
 /* 
  * All of the TSC_ADC_SS registers:
@@ -65,7 +64,7 @@
 #define FIFO0DATA TSC_ADC_START+0x100
 #define FIFO1DATA TSC_ADC_START+0x200
 
-#define THIS_SHOULD_BE_FIFO0DATA 0x44E0D100
+#define CTRL_BASE 0x44E10000
 
 //check out DMA requests
 
@@ -116,16 +115,22 @@ MOV r12,0xFFFFFFFF //reset r12 to confirm that the followin load
 LBBO r12,r10,0,12 //Load value from CTRL register to r10
 //The C host programm will echo the value of r10*/
 	
-	kprintf("inittemp\n");
+	kprintf("inittemp:\n");
 
-	printf("attempting to write to anything adc: ");
-
-	writeReg(REVISION, 0x0);
-	printf("attempting to write to anything adc 2: ");
-	writeReg(SYSCONFIG, 0x0);
+	kprintf("attempting to write to ");
+	printHex(TSC_ADC_CTRL);
+	kprintf(":\n");
+	writeReg(TSC_ADC_CTRL, 0x05);
+	kprintf("...done\n");
+	//writeReg(REVISION, 0x0);
+	kprintf("attempting to write to anything adc 2: ");
+	//writeReg(SYSCONFIG, 0x0);
 
 	
 	kprintf("initializing step configuration registers: \n");
+	
+
+	
 	writeReg(STEPCONFIG1, 0x4000000);
 	writeReg(STEPCONFIG2, 0x00);
 	writeReg(STEPCONFIG3, 0x00);
@@ -177,9 +182,9 @@ process TestTemp(sid32 printMutex){
 		//*light_on=0xFFFFFFFF; /*turn ALL GPIO pins on. Obv needs optimization
 		writeReg(0x44E0713C,0xFFFFFFFF);
 	}*/
-	kprintf("setting gpio to output\n");
-	writeReg(0x44E07134, 0x00);
-	
+	kprintf("setting gpio to input (as a control)\n");
+	writeReg(0x44E07134, 0xFFFFFFFF);
+	kprintf("...done\n");
 	inittemp();
 	kprintf("setting gpio to input\n");
 	writeReg(0x44E07134, 0xFFFFFFFF);
