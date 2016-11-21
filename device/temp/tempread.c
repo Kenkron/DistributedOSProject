@@ -1,4 +1,4 @@
-/* tempread.c - tempread */
+/* tempread.c - tempread*/
 #include <xinu.h>
 
 #define TSC_ADC_START 0x44e0D000
@@ -10,6 +10,10 @@
 #define FIFO1DATA TSC_ADC_START+0x200
 
 
-uint32 tempread(){
+uint32 tempread(
+		struct dentry *devptr,
+		char *buff,
+		int32 count
+){
 	return ((uint32*)FIFO0DATA)[0];
 }
