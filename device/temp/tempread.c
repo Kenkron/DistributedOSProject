@@ -10,7 +10,7 @@
 #define FIFO1DATA TSC_ADC_START+0x200
 
 
-uint32 tempread(
+devcall tempread(
 		struct dentry *devptr,
 		char *buff,
 		int32 count
