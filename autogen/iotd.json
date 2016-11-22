@@ -1,0 +1,58 @@
+{
+    "Platform":"BBB",
+    "OS":"Xinu",
+    "Language":"C",
+    "Devices": {
+                "Type": [
+                         {
+                        "Style":"Actuator",
+                        "Sensor":   [
+                           {
+                                     "Driver_ID":"LED",
+                                     "Filename":"led",
+                                     "Type":"Digital",
+                                     "Measurement":"NONE",
+                                     "Formula":"NONE",
+                                     "Header":"P8",
+                                     "Board_pin":"19",
+                                     "Power":"GRND",
+                                     "Power_header":"P8",
+                                     "Power_board_pin":"1",
+                                     "IO":"Out",
+                                     "Data_range":["0","1"],
+                                     "functions": [
+                                                   {"turn_light_on":"put"},
+                                                   {"turn_light_off":"put"},
+                                                   {"light_status":"get"}
+                                                   ]
+                           }
+                                   ]
+                         },
+                         {
+                        "Style":"Digital",
+                        "Sensor":   [
+                            {
+                                     "Driver_ID":"PUSHBTN",
+                                     "Filename":"button",
+                                     "Type":"Digital",
+                                     "Measurement":"NONE",
+                                     "Formula":"NONE",
+                                     "Header":"P8",
+                                     "Board_pin":"17",
+                                     "Power":"VDD_3V3",
+                                     "Power_header":"P9",
+                                     "Power_board_pin":"3",
+                                     "IO":"In",
+                                     "Data_range":["0","1"],
+                                     "functions": [
+                                                   {"button_status":"get"},
+                                                   {"if_pressed":"null"}
+                                                   ]
+                            }
+                                     ]
+                         }
+                         ]
+    }
+}
+
+                                              
