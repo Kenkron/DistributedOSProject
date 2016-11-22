@@ -21,15 +21,6 @@ struct	procent	proctab[NPROC];	/* Process table			*/
 struct	sentry	semtab[NSEM];	/* Semaphore table			*/
 struct	memblk	memlist;	/* List of free memory blocks		*/
 
-/* Declarations of MQTT stuff */
-
-struct	topicentry 	topictab[NTOPICS*NGROUPS];			/* Topic table					*/
-	pid32		topicpidtab[NTOPICS*NGROUPS*NSUBS];		/* Table storing each topic's 8 possible pids	*/
-	void (*topichantab[NTOPICS*NGROUPS*NSUBS])(topic16, uint32);	/* Table to store handlers 			*/
-sid32 	brokersem;						/* Semaphore for broker				*/
-
-
-
 /* Active system status */
 
 int	prcount;		/* Total number of live processes	*/
@@ -216,20 +207,6 @@ static	void	sysinit()
 		semptr->scount = 0;
 		semptr->squeue = newqueue();
 	}
-
-	/* Initialize mqtt stuff */
-
-	for (i = 0; i < (NTOPICS*NGROUPS); i++) {
-		topptr = &topictab[i];
-		topptr->tstate = T_FREE;
-	}
-
-	for (i = 0; i < (NTOPICS*NGROUPS*NSUBS); i++) {
-		topicpidtab[i] = -1;
-		topichantab[i] = 0;
-	}
-
-	brokersem = semcreate(0);
 
 	/* Initialize buffer pools */
 

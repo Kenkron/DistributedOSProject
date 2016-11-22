@@ -16,6 +16,7 @@
 #define DEFAULT_TIMEOUT_MSEC DEFAULT_TIMEOUT_SEC*1000
 
 uid32 broker_slot;
+uid32 broadcast_slot;
 struct	mqttdata mqttsntab[MQTTSN_SLOTS];
 
 unsigned char sendbuf[MAX_PACKET_SIZE];
@@ -28,11 +29,15 @@ int32 waitfor(int32 msg_type);
 process local_broker();
 
 void mqttsn_init(void) {
-	uint32 ip;
 	MQTTSNPacket_connectData options = MQTTSNPacket_connectData_initializer;
 	int32 len, res;
 	int32 xinu_res;
 	int32 lv;
+	uint32 gwIP;
+	uint16 gwPort;
+	unsigned char dummy_byte;
+	unsigned short dummy_short;
+	unsigned char* dummy_str;
 
 	kprintf("Initializing mqttsn subsystem.\n");
 
@@ -45,10 +50,38 @@ void mqttsn_init(void) {
 		mqttsntab[lv].used = 0;
 	}
 
-	/* Open a port for broker */
+	/* Open a port for broadcast */
 	kprintf("Opening port.\n");
-	dot2ip(BROKER_IP, &ip);
-	broker_slot = udp_register(ip, BROKER_PORT, MQTTSN_PORT);
+	broadcast_slot = udp_register(0, BROKER_PORT, MQTTSN_PORT);
+	if (broadcast_slot == SYSERR) panic("Error creating MQTTSN broadcast slot");
+
+	/* Send searchGW broadcast */
+	kprintf("Sending searchgw broadcast.\n");
+	len = MQTTSNSerialize_searchgw(sendbuf, MAX_PACKET_SIZE, 1); // 1 = gw on immediate network
+	if (len <= 0)
+		panic("Error serializing MQTTSN searchgw");
+	res = udp_sendto(broadcast_slot, IP_BCAST, BROKER_PORT, (char *)sendbuf, len);
+	if (res == SYSERR)
+		panic("Error broadcasting searchgw.");
+
+	/* Wait for infogw */
+	kprintf("Waiting for infogw response.\n");
+	res = udp_recvaddr(broadcast_slot, &gwIP, &gwPort, (char*) readbuf, MAX_PACKET_SIZE, DEFAULT_TIMEOUT_MSEC);
+	if (res == TIMEOUT)
+		panic("Didn't receive infogw within 30 seconds.");
+	if (res == SYSERR)
+		panic("Error reading packet from broadcast slot.");
+
+	/* Deserialize infogw and then we're good */
+	kprintf("Received a packet, making sure it's a gwinfo packet.\n");
+	len = MQTTSNDeserialize_gwinfo(&dummy_byte, &dummy_short, &dummy_str, readbuf, MAX_PACKET_SIZE);
+	if (len != 1)
+		panic("Error deserializing gwinfo packet.");
+
+	kprintf("Correctly received broadcast from IP %d.\n", gwIP);
+
+	udp_release(broadcast_slot);
+	broker_slot = udp_register(gwIP, BROKER_PORT, MQTTSN_PORT);
 	if (broker_slot == SYSERR) panic("Error creating MQTTSN broker slot");
 
 	kprintf("Connecting to broker.\n");
