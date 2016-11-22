@@ -93,7 +93,7 @@ void	nulluser()
 
 	/* Initialize the network stack and start processes */
 
-	/* net_init(); */
+	net_init();
 
 	/* Create a process to finish startup and start main */
 
@@ -108,7 +108,6 @@ void	nulluser()
 	}
 
 }
-
 
 /*------------------------------------------------------------------------
  *
@@ -140,6 +139,10 @@ local process	startup(void)
 	}
 
 #endif
+
+	/* Initialize mqttsn */
+	mqttsn_init();
+
 	/* Create a process to execute function main() */
 
 	resume(create((void *)main, INITSTK, INITPRIO,
@@ -149,6 +152,7 @@ local process	startup(void)
 	resume(create(broker, 4000, 50, "broker", 0 ));
 
 	/* Startup process exits at this point */
+	
 
 	return OK;
 }
@@ -166,8 +170,12 @@ static	void	sysinit()
 	int32 	j;
 	struct	procent	*prptr;		/* Ptr to process table entry	*/
 	struct	sentry	*semptr;	/* Ptr to semaphore table entry	*/
+
 	struct 	topic	*topicptr;	/* Ptr to topic in topics table */
 	struct pubentry *pubhead;		/* Head of pending publish buffer */
+
+	struct 	topicentry *topptr;	/* Ptr to topic table entry	*/
+
 
 	kprintf(CONSOLE_RESET);
 	kprintf("\n%s\n\n", VERSION);
