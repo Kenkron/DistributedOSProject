@@ -199,5 +199,19 @@ struct	dentry	devtab[NDEVS] =
 	  (void *)spiinit, (void *)ionull, (void *)ionull,
 	  (void *)ionull, (void *)ionull, (void *)ionull,
 	  (void *)ionull, (void *)ionull, (void *)spicontrol,
-	  (void *)0x481a0000, (void *)ionull, 0 }
+	  (void *)0x481a0000, (void *)ionull, 0 },
+
+/* LED is gpioout */
+	{ 26, 0, "LED",
+	  (void *)gpiooutinit, (void *)ionull, (void *)ionull,
+	  (void *)ionull, (void *)ionull, (void *)ionull,
+	  (void *)gpiooutgetc, (void *)gpiooutputc, (void *)ionull,
+	  (void *)0x44e0713c, (void *)ionull, 22 },
+
+/* PUSHBTN is gpioin */
+	{ 27, 0, "PUSHBTN",
+	  (void *)gpioininit, (void *)ionull, (void *)ionull,
+	  (void *)ionull, (void *)ionull, (void *)ionull,
+	  (void *)gpioingetc, (void *)gpioinputc, (void *)ionull,
+	  (void *)0x44e07138, (void *)ionull, 27 }
 };

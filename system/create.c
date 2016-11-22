@@ -3,6 +3,7 @@
 #include <xinu.h>
 
 local	int newpid();
+local	struct ientry* createInbox();
 
 #define	roundew(x)	( (x+3)& ~0x3)
 
@@ -51,12 +52,18 @@ pid32	create(
 	prptr->prsem = -1;
 	prptr->prparent = (pid32)getpid();
 	prptr->prhasmsg = FALSE;
+	
+
+	prptr->prhasmsgs = FALSE;
+
+	prptr->prinboxputsem = semcreate(NMAXMSGS);	/* MAX_MSG empty spots avaialable */
+	prptr->prinboxgetsem = semcreate(0);	/* No messages initially available */
+	prptr->prinboxhead = createInbox();
 
 	/* set up initial device descriptors for the shell		*/
 	prptr->prdesc[0] = CONSOLE;	/* stdin  is CONSOLE device	*/
 	prptr->prdesc[1] = CONSOLE;	/* stdout is CONSOLE device	*/
 	prptr->prdesc[2] = CONSOLE;	/* stderr is CONSOLE device	*/
-
 	/* Initialize stack as if the process was called		*/
 
 	*saddr = STACKMAGIC;
@@ -75,6 +82,7 @@ pid32	create(
 		else
 			*--saddr = 0;
 	}
+
 	*--saddr = (long)INITRET;	/* push on return address	*/
 	*--saddr = (long)0x00000053;	/* CPSR F bit set,		*/
 					/* Supervisor mode		*/
@@ -104,4 +112,24 @@ local	pid32	newpid(void)
 		}
 	}
 	return (pid32) SYSERR;
+}
+
+
+/*------------------------------------------------------------------------
+ *  createInbox  -  Create inbox for messages, Lab02
+ *------------------------------------------------------------------------
+ */
+local	struct ientry*	createInbox(void)
+{
+	struct ientry *inboxhead;
+
+	inboxhead = (struct ientry *)getbuf(INBOX_ID); /* Could add error check */
+#if DEBUG
+	if((int32)inboxhead==SYSERR) {kprintf("here\n");}
+#endif
+
+	inboxhead->msg=DEFAULT_MSG;
+	inboxhead->nextmsg=NULL;
+	return inboxhead;
+
 }

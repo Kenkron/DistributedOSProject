@@ -51,6 +51,8 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 #define LFILE5      23       /* type lfl      */
 #define SPI0        24       /* type spi      */
 #define SPI1        25       /* type spi      */
+#define LED         26       /* type gpioout  */
+#define PUSHBTN     27       /* type gpioin   */
 
 /* Control block sizes */
 
@@ -65,18 +67,44 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 #define	Nlfl	6
 #define	Nnam	1
 #define	Nspi	2
+#define	Ngpioin	1
+#define	Ngpioout	1
 
 #define DEVMAXNAME 24
-#define NDEVS 26
+#define NDEVS 28
 
 
 /* Configuration and Size Constants */
 
 #define	NPROC	     100	/* number of user processes		*/
+
 #define	NSEM	     100	/* number of semaphores			*/
+
 #define	IRQBASE	     32		/* base ivec for IRQ0			*/
+
 #define	IRQ_TIMER    IRQ_HW5	/* timer IRQ is wired to hardware 5	*/
+
 #define	IRQ_ATH_MISC IRQ_HW4	/* Misc. IRQ is wired to hardware 4	*/
+
 #define CLKFREQ      200000000	/* 200 MHz clock			*/
 
+/* Lab 03 */
+
+#define NTOPICS		255	/* max number of topics		        */
+
+#define	NGROUPS		255	/* max number of groups			*/
+
+#define NSUBSCRIBERS	8	/* max number of subscribers		*/
+
+#define MAXPENDING	BP_MAXN	/* max number of pending to be published*/
+
+#define PUBLISHSIZE	sizeof(struct pubentry)
+
+extern bpid32 	INBOX_ID;
+
+extern bpid32	PPUBLISH_ID;
+
+extern sid32	printsem;
+
 #define	LF_DISK_DEV	RAM0
+
