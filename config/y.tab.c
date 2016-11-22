@@ -62,7 +62,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 14 "config.y" /* yacc.c:339  */
+#line 5 "config.y" /* yacc.c:339  */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -71,75 +71,76 @@
 
 extern	char	*yytext;
 /*
-   Work-around for the type conflict that results from unmatched versions
-   of flex and bison (lex and yacc).  The idea is to force the new flex
-   style so the output file (lex.yy.c) treats yyleng as an int (as was
-   done by oldest lex versions) instead of a size_t.  We override the
-   new flex typedef of yy_size_t.
+   Workaround for type conflict resulting from unmatched versions of flex and
+   bison (lex and yacc).  Force new-style flex output (lex.yy.c) to treat
+   yyleng as an int (as done by oldest lex versions) instead of a size_t, by
+   overriding new flex's yy_size_t typedef.
 */
 #ifndef YY_TYPEDEF_YY_SIZE_T
 #define YY_TYPEDEF_YY_SIZE_T
 typedef int yy_size_t;
 #endif
-/* End work-around */
+/* end workaround */
 extern	int	yyleng;
-
-
-/********************************************************************************/
-/*										*/
-/*			Start of Definitions					*/
-/*										*/
-/********************************************************************************/
 
 #define	NIL	(struct dev_ent *)0x00
 
-#define	CONFC	 "conf.c"		/* Name of .c output			*/
-#define CONFH	 "conf.h"		/* Name of .h output			*/
-#define	CONFHREF "<conf.h>"		/* How conf.h referenced		*/
-#define	INFILE	 "Configuration"	/* Name of input file			*/
-#define	MAXNAME  16			/* Max length of names			*/
-
-#define	NDEVS		250		/* Max devices				*/
-#define	NTYPES		250		/* Max device types			*/
-
-int	linectr = 1;
+#define	CONFIGC	 "conf.c"		/* name of .c output     */
+#define CONFIGH	 "conf.h"		/* name of .h output     */
+#define	CONFHREF "<conf.h>"		/* how conf.h referenced */
+#define	CONFIGIN "Configuration"	/* name of input file    */
+#define	CONFMAXNM 24			/* max length of strings */
 
 FILE	*confc;
 FILE	*confh;
 
-int	brkcount = 0;			/* Count of %% separators till now in	*/
-					/*  the input file			*/
-char	*doing = "device type declarations";
+char	*dbstr;
+int	ndevs = 0;
+int	currname = -1;
+int	currtname = -1;
+int	currdname = -1;
+int	brkcount = 0;
 
-struct	dev_ent	{			/* Entry for a device or device type	*/
-	char	name[MAXNAME];		/* device name (unused in a type)	*/
-	char	tname[MAXNAME];		/* Type name				*/
-	char	ison[MAXNAME];		/* Name is "on" XXX			*/
-	int	tindex;			/* Index in dtypes (unused in a type)	*/
-	int	csr;			/* Control Status Register addr		*/
-	int	irq;			/* interrupt request			*/
-	char	intr[MAXNAME];		/* interrupt function name		*/
-	char	init[MAXNAME];		/* init function name			*/
-	char	open[MAXNAME];		/* open function name			*/
-	char	close[MAXNAME];		/* close function name			*/
-	char	read[MAXNAME];		/* read function name			*/
-	char	write[MAXNAME];		/* write function name			*/
-	char	control[MAXNAME];	/* control function name		*/
-	char	seek[MAXNAME];		/* seek function name			*/
-	char	getc[MAXNAME];		/* getc function name			*/
-	char	putc[MAXNAME];		/* putc function name			*/
-	int	minor;			/* In a device, the minor device	*/
-					/*  assigned to the device 0,1,...	*/
-					/*  in a type, the next minor number	*/
-					/*  to assign				*/
+struct	sym_ent { /* symbol table */
+	char	*name;
+	int	occurs;
+} symtab[250];
+
+int	nsym = 0;
+int	linectr = 1;
+
+char	*doing = "device type declaration";
+char	*s;
+
+struct	dev_ent
+{
+	char	*name;		    /* device name (not used in types)	*/
+	char	*tname;		    /* type name			*/
+	int	tnum;		    /* symbol table index of type	*/
+	char	*device;	    /* device name			*/
+	int	csr;		    /* Control Status Register addr	*/
+	int	irq;		    /* interrupt request		*/
+	char	intr[CONFMAXNM];    /* interrupt routine		*/
+	char	init[CONFMAXNM];    /* init routine name		*/
+	char	open[CONFMAXNM];    /* open routine name		*/
+	char	close[CONFMAXNM];   /* close routine name		*/
+	char	read[CONFMAXNM];    /* read routine name		*/
+	char	write[CONFMAXNM];   /* write routine name		*/
+	char	control[CONFMAXNM]; /* control routine name		*/
+	char	seek[CONFMAXNM];    /* seek routine name		*/
+	char	getc[CONFMAXNM];    /* getc routine name		*/
+	char	putc[CONFMAXNM];    /* putc routine name		*/
+	int	minor;		    /* minor device number 0,1,...	*/
+	struct	dev_ent *next;	    /* next node on the list		*/
 };
-struct	dev_ent		dtypes[NTYPES];/* Table of all device types		*/
-int	ntypes	= 0;			/* Number of device types found		*/
 
-struct	dev_ent		devs[NDEVS];	/* Table of all devices			*/
-int	ndevs = 0;			/* Number of devices found		*/
+struct	dev_ent	*ftypes = NIL; /* linked list of device types  */
+struct	dev_ent	*devs = NIL;   /* linked list of device decls. */
+struct	dev_ent	*lastdv = NIL;
+struct	dev_ent	*currtype = NIL;
 
-char *devstab[] = {
+char *devstab[] =
+{
 	"/* Device table entry */",
 	"struct\tdentry\t{",
 	"\tint32   dvnum;",
@@ -162,27 +163,19 @@ char *devstab[] = {
 	NULL
 };
 
-char	saveattrid[MAXNAME];		/* Holds the IDENT from an attribute	*/
-
-/********************************************************************************/
-/*										*/
-/*			       Function prototypes				*/
-/*										*/
-/********************************************************************************/
-
-void	addattr(int, int);
-int	addton(char *);
-int	config_atoi(char *, int);
-void	devisid(char *);
-void	devonid(char *);
-void	getattrid(char *);
-void	newdev(char *);
-int	newtype(char *);
-void	yyerror(char *);
+/* Prototypes */
+void yyerror(char *s);
+int	lookup(char *str, int len);
+int	config_atoi(char *p, int len);
+void	newattr(int tok, int val);
+int	cktname(int symid);
+void	mktype(int deviceid);
+void	initattr(struct dev_ent *fstr, int tnum, int deviceid);
+void	mkdev(int nameid, int typid, int deviceid);
+int	ckdname(int devid);
 
 
-
-#line 186 "y.tab.c" /* yacc.c:339  */
+#line 179 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -215,48 +208,46 @@ extern int yydebug;
   enum yytokentype
   {
     DEFBRK = 258,
-    IFBRK = 259,
-    COLON = 260,
-    OCTAL = 261,
-    INTEGER = 262,
-    IDENT = 263,
-    CSR = 264,
-    IRQ = 265,
-    INTR = 266,
-    INIT = 267,
-    OPEN = 268,
-    CLOSE = 269,
-    READ = 270,
-    WRITE = 271,
-    SEEK = 272,
-    CONTROL = 273,
-    IS = 274,
-    ON = 275,
-    GETC = 276,
-    PUTC = 277
+    COLON = 259,
+    OCTAL = 260,
+    INTEGER = 261,
+    IDENT = 262,
+    CSR = 263,
+    IRQ = 264,
+    INTR = 265,
+    INIT = 266,
+    OPEN = 267,
+    CLOSE = 268,
+    READ = 269,
+    WRITE = 270,
+    SEEK = 271,
+    CONTROL = 272,
+    IS = 273,
+    ON = 274,
+    GETC = 275,
+    PUTC = 276
   };
 #endif
 /* Tokens.  */
 #define DEFBRK 258
-#define IFBRK 259
-#define COLON 260
-#define OCTAL 261
-#define INTEGER 262
-#define IDENT 263
-#define CSR 264
-#define IRQ 265
-#define INTR 266
-#define INIT 267
-#define OPEN 268
-#define CLOSE 269
-#define READ 270
-#define WRITE 271
-#define SEEK 272
-#define CONTROL 273
-#define IS 274
-#define ON 275
-#define GETC 276
-#define PUTC 277
+#define COLON 259
+#define OCTAL 260
+#define INTEGER 261
+#define IDENT 262
+#define CSR 263
+#define IRQ 264
+#define INTR 265
+#define INIT 266
+#define OPEN 267
+#define CLOSE 268
+#define READ 269
+#define WRITE 270
+#define SEEK 271
+#define CONTROL 272
+#define IS 273
+#define ON 274
+#define GETC 275
+#define PUTC 276
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -274,7 +265,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 278 "y.tab.c" /* yacc.c:358  */
+#line 269 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -514,23 +505,23 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  3
+#define YYFINAL  4
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   39
+#define YYLAST   47
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  23
+#define YYNTOKENS  22
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  20
+#define YYNNTS  17
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  35
+#define YYNRULES  33
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  58
+#define YYNSTATES  55
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   277
+#define YYMAXUTOK   276
 
 #define YYTRANSLATE(YYX)                                                \
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -566,17 +557,17 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22
+      15,    16,    17,    18,    19,    20,    21
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   141,   141,   150,   151,   154,   157,   160,   161,   164,
-     167,   170,   171,   174,   175,   176,   177,   178,   179,   180,
-     181,   182,   183,   184,   185,   188,   191,   201,   202,   205,
-     208,   211,   214,   217,   220,   223
+       0,   118,   118,   121,   124,   125,   128,   131,   132,   135,
+     138,   141,   144,   145,   148,   149,   150,   151,   152,   153,
+     154,   155,   156,   157,   158,   159,   162,   165,   166,   169,
+     172,   175,   178,   179
 };
 #endif
 
@@ -585,12 +576,12 @@ static const yytype_uint8 yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "DEFBRK", "IFBRK", "COLON", "OCTAL",
-  "INTEGER", "IDENT", "CSR", "IRQ", "INTR", "INIT", "OPEN", "CLOSE",
-  "READ", "WRITE", "SEEK", "CONTROL", "IS", "ON", "GETC", "PUTC",
-  "$accept", "configuration", "devtypes", "devtype", "tname", "dev_tlist",
-  "theader", "tonid", "attr_list", "attr", "id", "number", "devices",
-  "device", "dheader", "dname", "devis", "devisid", "devon", "devonid", YY_NULLPTR
+  "$end", "error", "$undefined", "DEFBRK", "COLON", "OCTAL", "INTEGER",
+  "IDENT", "CSR", "IRQ", "INTR", "INIT", "OPEN", "CLOSE", "READ", "WRITE",
+  "SEEK", "CONTROL", "IS", "ON", "GETC", "PUTC", "$accept",
+  "configuration", "devtypes", "ftypes", "ftype", "dev_list", "devheader",
+  "tname", "id", "attr_list", "attr", "number", "devdescriptors",
+  "descriptor", "fspec", "dname", "optional_on", YY_NULLPTR
 };
 #endif
 
@@ -601,14 +592,14 @@ static const yytype_uint16 yytoknum[] =
 {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275,   276,   277
+     275,   276
 };
 # endif
 
-#define YYPACT_NINF -14
+#define YYPACT_NINF -17
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-14)))
+  (!!((Yystate) == (-17)))
 
 #define YYTABLE_NINF -1
 
@@ -619,12 +610,12 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-     -14,    10,    22,   -14,   -14,   -14,   -14,     6,    16,     8,
-     -14,   -14,   -14,    12,    18,     8,   -14,    -9,    19,    13,
-     -14,   -14,   -14,    -9,    25,    25,    26,    26,    26,    26,
-      26,    26,    26,    26,    26,    26,   -14,   -14,   -14,    27,
-     -14,    -9,   -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14,
-     -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14
+     -17,     2,   -17,     0,   -17,    -3,   -17,   -17,   -17,   -14,
+       4,   -17,   -17,   -17,    -9,    -3,   -14,   -17,   -17,    23,
+      -3,   -17,   -17,    23,     5,     5,    -3,    -3,    -3,    -3,
+      -3,    -3,    -3,    -3,    -3,    -3,   -17,    -7,    23,   -17,
+     -17,   -17,   -17,   -17,   -17,   -17,   -17,   -17,   -17,   -17,
+     -17,   -17,    -3,   -17,   -17
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -632,26 +623,26 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       3,     0,     0,     1,    27,     6,     4,     0,     2,     0,
-      31,    28,    11,     0,     0,     5,    11,    29,     0,     0,
-      10,     9,    11,     7,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,    12,    33,    32,     0,
-      30,     8,    26,    13,    14,    25,    15,    18,    16,    17,
-      21,    22,    23,    24,    19,    20,    35,    34
+       4,     0,    27,     0,     1,     2,     3,    11,     5,     0,
+       0,    31,    28,    12,     0,     0,     6,    12,    10,    29,
+       0,     9,    12,     7,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,    13,    32,     8,    26,
+      14,    15,    16,    19,    17,    18,    22,    23,    24,    25,
+      20,    21,     0,    30,    33
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -14,   -14,   -14,   -14,   -14,   -14,    21,   -14,     7,   -14,
-     -13,    14,   -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14
+     -17,   -17,   -17,   -17,   -17,   -17,    -2,   -17,    -5,   -16,
+     -17,   -12,   -17,   -17,   -17,   -17,   -17
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     1,     2,     6,     7,    15,    16,    21,    17,    36,
-      46,    43,     8,    11,    12,    13,    19,    38,    40,    57
+      -1,     1,     2,     3,     8,    16,    17,     9,    10,    19,
+      36,    40,     5,    12,    13,    14,    53
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -659,48 +650,50 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      24,    25,    26,    27,    28,    29,    30,    31,    32,    33,
-       3,     9,    34,    35,    47,    48,    49,    50,    51,    52,
-      53,    54,    55,    23,    10,     4,    20,    37,    14,    41,
-       5,    18,    42,    39,    45,    56,    22,     0,     0,    44
+      11,    23,     4,     6,     7,    15,    38,     7,    18,    20,
+      21,    39,    52,    41,    22,    37,     0,     0,     0,     0,
+       0,    42,    43,    44,    45,    46,    47,    48,    49,    50,
+      51,    24,    25,    26,    27,    28,    29,    30,    31,    32,
+      33,     0,     0,    34,    35,     0,     0,    54
 };
 
 static const yytype_int8 yycheck[] =
 {
-       9,    10,    11,    12,    13,    14,    15,    16,    17,    18,
-       0,     5,    21,    22,    27,    28,    29,    30,    31,    32,
-      33,    34,    35,    16,     8,     3,     8,     8,    20,    22,
-       8,    19,     7,    20,     8,     8,    15,    -1,    -1,    25
+       5,    17,     0,     3,     7,    19,    22,     7,     4,    18,
+      15,     6,    19,    25,    16,    20,    -1,    -1,    -1,    -1,
+      -1,    26,    27,    28,    29,    30,    31,    32,    33,    34,
+      35,     8,     9,    10,    11,    12,    13,    14,    15,    16,
+      17,    -1,    -1,    20,    21,    -1,    -1,    52
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,    24,    25,     0,     3,     8,    26,    27,    35,     5,
-       8,    36,    37,    38,    20,    28,    29,    31,    19,    39,
-       8,    30,    29,    31,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    21,    22,    32,     8,    40,    20,
-      41,    31,     7,    34,    34,     8,    33,    33,    33,    33,
-      33,    33,    33,    33,    33,    33,     8,    42
+       0,    23,    24,    25,     0,    34,     3,     7,    26,    29,
+      30,    30,    35,    36,    37,    19,    27,    28,     4,    31,
+      18,    30,    28,    31,     8,     9,    10,    11,    12,    13,
+      14,    15,    16,    17,    20,    21,    32,    30,    31,     6,
+      33,    33,    30,    30,    30,    30,    30,    30,    30,    30,
+      30,    30,    19,    38,    30
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    23,    24,    25,    25,    26,    27,    28,    28,    29,
-      30,    31,    31,    32,    32,    32,    32,    32,    32,    32,
-      32,    32,    32,    32,    32,    33,    34,    35,    35,    36,
-      37,    38,    39,    40,    41,    42
+       0,    22,    23,    24,    25,    25,    26,    27,    27,    28,
+      29,    30,    31,    31,    32,    32,    32,    32,    32,    32,
+      32,    32,    32,    32,    32,    32,    33,    34,    34,    35,
+      36,    37,    38,    38
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     3,     0,     2,     3,     1,     2,     3,     2,
-       1,     0,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     1,     1,     0,     2,     2,
-       3,     1,     2,     1,     2,     1
+       0,     2,     2,     2,     0,     2,     2,     2,     3,     2,
+       2,     1,     0,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     1,     0,     2,     2,
+       4,     1,     0,     2
 };
 
 
@@ -1377,139 +1370,133 @@ yyreduce:
   switch (yyn)
     {
         case 3:
-#line 150 "config.y" /* yacc.c:1646  */
+#line 121 "config.y" /* yacc.c:1646  */
     { doing = "device definitions"; }
-#line 1383 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 6:
-#line 157 "config.y" /* yacc.c:1646  */
-    { (yyval) = newtype(yytext); }
-#line 1389 "y.tab.c" /* yacc.c:1646  */
+#line 1376 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 164 "config.y" /* yacc.c:1646  */
-    { (yyval) = (yyvsp[0]); }
-#line 1395 "y.tab.c" /* yacc.c:1646  */
+#line 135 "config.y" /* yacc.c:1646  */
+    { mktype((yyvsp[0])); }
+#line 1382 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 167 "config.y" /* yacc.c:1646  */
-    { (yyval) = addton(yytext); }
-#line 1401 "y.tab.c" /* yacc.c:1646  */
+#line 138 "config.y" /* yacc.c:1646  */
+    {(yyval) = currtname = cktname((yyvsp[-1]));}
+#line 1388 "y.tab.c" /* yacc.c:1646  */
     break;
 
-  case 13:
-#line 174 "config.y" /* yacc.c:1646  */
-    { addattr(CSR,    (yyvsp[0]));	}
-#line 1407 "y.tab.c" /* yacc.c:1646  */
+  case 11:
+#line 141 "config.y" /* yacc.c:1646  */
+    { (yyval) = currname = lookup(yytext, yyleng); }
+#line 1394 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 175 "config.y" /* yacc.c:1646  */
-    { addattr(IRQ,    (yyvsp[0]));	}
-#line 1413 "y.tab.c" /* yacc.c:1646  */
+#line 148 "config.y" /* yacc.c:1646  */
+    { newattr(CSR, (yyvsp[0]));	}
+#line 1400 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 176 "config.y" /* yacc.c:1646  */
-    { addattr(INTR,    0);	}
-#line 1419 "y.tab.c" /* yacc.c:1646  */
+#line 149 "config.y" /* yacc.c:1646  */
+    { newattr(IRQ, (yyvsp[0]));	}
+#line 1406 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 177 "config.y" /* yacc.c:1646  */
-    { addattr(OPEN,    0);	}
-#line 1425 "y.tab.c" /* yacc.c:1646  */
+#line 150 "config.y" /* yacc.c:1646  */
+    { newattr(INTR, (yyvsp[0]));	}
+#line 1412 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 178 "config.y" /* yacc.c:1646  */
-    { addattr(CLOSE,   0);	}
-#line 1431 "y.tab.c" /* yacc.c:1646  */
+#line 151 "config.y" /* yacc.c:1646  */
+    { newattr(OPEN, (yyvsp[0]));	}
+#line 1418 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 179 "config.y" /* yacc.c:1646  */
-    { addattr(INIT,    0);	}
-#line 1437 "y.tab.c" /* yacc.c:1646  */
+#line 152 "config.y" /* yacc.c:1646  */
+    { newattr(CLOSE, (yyvsp[0]));	}
+#line 1424 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 180 "config.y" /* yacc.c:1646  */
-    { addattr(GETC,    0);	}
-#line 1443 "y.tab.c" /* yacc.c:1646  */
+#line 153 "config.y" /* yacc.c:1646  */
+    { newattr(INIT, (yyvsp[0]));	}
+#line 1430 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 181 "config.y" /* yacc.c:1646  */
-    { addattr(PUTC,    0);	}
-#line 1449 "y.tab.c" /* yacc.c:1646  */
+#line 154 "config.y" /* yacc.c:1646  */
+    { newattr(GETC, (yyvsp[0]));	}
+#line 1436 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 182 "config.y" /* yacc.c:1646  */
-    { addattr(READ,    0);	}
-#line 1455 "y.tab.c" /* yacc.c:1646  */
+#line 155 "config.y" /* yacc.c:1646  */
+    { newattr(PUTC, (yyvsp[0]));	}
+#line 1442 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 183 "config.y" /* yacc.c:1646  */
-    { addattr(WRITE,   0);	}
-#line 1461 "y.tab.c" /* yacc.c:1646  */
+#line 156 "config.y" /* yacc.c:1646  */
+    { newattr(READ, (yyvsp[0]));	}
+#line 1448 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 184 "config.y" /* yacc.c:1646  */
-    { addattr(SEEK,    0);	}
-#line 1467 "y.tab.c" /* yacc.c:1646  */
+#line 157 "config.y" /* yacc.c:1646  */
+    { newattr(WRITE, (yyvsp[0]));	}
+#line 1454 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 185 "config.y" /* yacc.c:1646  */
-    { addattr(CONTROL, 0);	}
-#line 1473 "y.tab.c" /* yacc.c:1646  */
+#line 158 "config.y" /* yacc.c:1646  */
+    { newattr(SEEK, (yyvsp[0]));	}
+#line 1460 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 188 "config.y" /* yacc.c:1646  */
-    { (yyval) = 0; getattrid(yytext); }
-#line 1479 "y.tab.c" /* yacc.c:1646  */
+#line 159 "config.y" /* yacc.c:1646  */
+    { newattr(CONTROL, (yyvsp[0]));	}
+#line 1466 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 191 "config.y" /* yacc.c:1646  */
+#line 162 "config.y" /* yacc.c:1646  */
     { (yyval) = config_atoi(yytext, yyleng); }
-#line 1485 "y.tab.c" /* yacc.c:1646  */
+#line 1472 "y.tab.c" /* yacc.c:1646  */
     break;
 
-  case 27:
-#line 201 "config.y" /* yacc.c:1646  */
-    { doing = "interface types"; }
-#line 1491 "y.tab.c" /* yacc.c:1646  */
+  case 30:
+#line 172 "config.y" /* yacc.c:1646  */
+    { mkdev((yyvsp[-3]), (yyvsp[-1]), (yyvsp[0])); }
+#line 1478 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 211 "config.y" /* yacc.c:1646  */
-    { newdev(yytext); }
-#line 1497 "y.tab.c" /* yacc.c:1646  */
+#line 175 "config.y" /* yacc.c:1646  */
+    { (yyval) = currdname = ckdname((yyvsp[0])); }
+#line 1484 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 32:
+#line 178 "config.y" /* yacc.c:1646  */
+    { (yyval) = 0;  }
+#line 1490 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 217 "config.y" /* yacc.c:1646  */
-    { devisid(yytext); }
-#line 1503 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 35:
-#line 223 "config.y" /* yacc.c:1646  */
-    { devonid(yytext); }
-#line 1509 "y.tab.c" /* yacc.c:1646  */
+#line 179 "config.y" /* yacc.c:1646  */
+    { (yyval) = (yyvsp[0]); }
+#line 1496 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1513 "y.tab.c" /* yacc.c:1646  */
+#line 1500 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1737,21 +1724,12 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 226 "config.y" /* yacc.c:1906  */
-
+#line 181 "config.y" /* yacc.c:1906  */
 
 #include "lex.yy.c"
 
-
-/************************************************************************/
-/*									*/
-/* main  -  main program: parse arguments, invoke the parser, and	*/
-/*		write the conf.h and conf.c files			*/
-/*									*/
-/************************************************************************/
-
-
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 	int n, i, j, l, fcount;
 	struct dev_ent *s;
 	int   verbose = 0;
@@ -1765,7 +1743,7 @@ int main(int argc, char **argv) {
 	}
 
 	if ( argc > 4 ) {
-		fprintf(stderr, "use: config [-v] [input_file] [conf.c] [conf.h]\n");
+		fprintf(stderr, "use: config [-v] [file] [conf.c] [conf.h]\n");
 		exit(1);
 	}
 
@@ -1778,18 +1756,13 @@ int main(int argc, char **argv) {
 		}
 	}
 	else {	/* try to open Configuration file */
-		if (freopen(INFILE, "r", stdin) == NULL) {
-			fprintf(stderr, "Can't open %s\n", INFILE);
+		if (freopen(CONFIGIN, "r", stdin) == NULL) {
+			fprintf(stderr, "Can't open %s\n", CONFIGIN);
 			exit(1);
 		}
 	}
 
-	/****************************************************************/
-	/*								*/
-	/*		Parse the Configuration file			*/
-	/*								*/
-	/****************************************************************/
-
+	/* Parse the Configuration file */
 
 	if (verbose) { printf("Parsing configuration specs...\n"); }
 
@@ -1806,8 +1779,8 @@ int main(int argc, char **argv) {
 		}
 	}
 	else { 	/* try to open conf.c file */
-		if ( (confc = fopen(CONFC,"w") ) == NULL) {
-			fprintf(stderr, "Can't write on %s\n", CONFC);
+		if ( (confc = fopen(CONFIGC,"w") ) == NULL) {
+			fprintf(stderr, "Can't write on %s\n", CONFIGC);
 			exit(1);
 		}
 	}
@@ -1819,18 +1792,13 @@ int main(int argc, char **argv) {
 		}
 	}
 	else { 	/* try to open conf.h file */
-		if ( (confh = fopen(CONFH,"w") ) == NULL) {
-			fprintf(stderr, "Can't write on %s\n", CONFH);
+		if ( (confh = fopen(CONFIGH,"w") ) == NULL) {
+			fprintf(stderr, "Can't write on %s\n", CONFIGH);
 			exit(1);
 		}
 	}
 
-	/****************************************************************/
-	/*								*/
-	/*			produce conf.h				*/
-	/*								*/
-	/****************************************************************/
-
+	/** produce conf.h **/
 
 	fprintf(confh, "/* conf.h (GENERATED FILE; DO NOT EDIT) */\n\n");
 
@@ -1844,51 +1812,53 @@ int main(int argc, char **argv) {
 
 	fprintf(confh, "\n");
 
-	/* write device declarations and definitions */
-
+	/* write device declarations and definitions; count type refs. */
 	fprintf(confh, "/* Device name definitions */\n\n");
-	for (i = 0; i<ndevs; i++) {
-		s = &devs[i];
-		fprintf(confh, "#define %-20s%2d\t/* type %-8s */\n",
-			s->name, i, s->tname);
+	for (i = 0, s = devs; s != NIL; i++, s = s->next) {
+		fprintf(confh, "#define %-12s%d       /* type %-8s */\n",
+		        s->name, i, s->tname);
+		s->minor = symtab[s->tnum].occurs++;
 	}
 	fprintf(confh, "\n");
 
 	/* write count of device types */
 
 	fprintf(confh, "/* Control block sizes */\n\n");
-	for (i = 0; i < ntypes;  i++) {
-		s = &dtypes[i];
-		if (s->minor > 0) {
+	for (i = 0; i < nsym; i++)
+	{
+		if (symtab[i].occurs > 0)
+		{
+			int j;
+			char name[CONFMAXNM];
+			strncpy(name, symtab[i].name, CONFMAXNM);
+
+			name[CONFMAXNM-1] = '\0';
+
 			fprintf(confh, "#define\tN%s\t%d\n",
-				s->tname, s->minor);
+			        name, symtab[i].occurs);
 		}
 	}
 
 	fprintf(confh, "\n");
 
+	fprintf(confh, "#define DEVMAXNAME %d\n", CONFMAXNM);
+
 	if (ndevs > 0) { fprintf(confh, "#define NDEVS %d\n", ndevs); }
 
 	/* Copy definitions to output */
+	if (brkcount == 2 && verbose)
+	{ printf("Copying definitions to %s...\n", CONFIGH); }
 
-	if (brkcount >= 4 && verbose) {
-		printf("Copying definitions to %s...\n", CONFH);
+	if (brkcount == 2 )
+	{
+		while ( (c = input()) > 0)    /* lex input routine */
+		{ putc(c, confh); }
 	}
 
-	if (brkcount >= 2) {
-		while ( (c = input()) > 0) {	/* lex input function	*/
-			putc(c, confh);
-		}
-	}
 	fclose(confh);
 
 
-	/****************************************************************/
-	/*								*/
-	/*			produce conf.c				*/
-	/*								*/
-	/****************************************************************/
-
+	/** produce conf.c **/
 
 	fprintf(confc, "/* conf.c (GENERATED FILE; DO NOT EDIT) */\n\n");
 	fprintf(confc, "#include <xinu.h>\n\n");
@@ -1913,108 +1883,75 @@ int main(int argc, char **argv) {
 			" */");
 	}
 
-	for (i=0; i<ndevs; i++) {
-		s = &devs[i];
+	for (fcount = 0, s = devs; s != NIL; fcount++, s = s->next)
+	{
 		fprintf(confc, "/* %s is %s */\n", s->name, s->tname);
-		fprintf(confc, "\t{ %d, %d, \"%s\",\n", i, s->minor, s->name);
+		fprintf(confc, "\t{ %d, %d, \"%s\",\n", fcount, s->minor, s->name);
 		fprintf(confc, "\t  (void *)%s, (void *)%s, (void *)%s,\n",
-			s->init, s->open, s->close);
+		        s->init, s->open, s->close);
 		fprintf(confc, "\t  (void *)%s, (void *)%s, (void *)%s,\n",
-			s->read, s->write, s->seek);
+		        s->read, s->write, s->seek);
 		fprintf(confc, "\t  (void *)%s, (void *)%s, (void *)%s,\n",
-			s->getc, s->putc, s->control);
+		        s->getc, s->putc, s->control);
 		fprintf(confc, "\t  (void *)0x%x, (void *)%s, %d }",
-			s->csr, s->intr, s->irq);
-		if (i< ndevs-1) {
-			fprintf(confc, ",\n\n");
-		} else {
-			fprintf(confc, "\n};");
-		}
+		        s->csr, s->intr, s->irq);
+
+		if ( s->next != NIL ) { fprintf(confc, ",\n\n"); }
+		else                  { fprintf(confc, "\n};");  }
 	}
 
-	/* we must guarantee conf.c written later than conf.h for make */
+	/* guarantee conf.c written later than conf.c for make */
 	fprintf(confc, "\n");
 	fclose(confc);
 
 	/* finish up and write report for user if requested */
-	if (verbose) {
+	if (verbose)
+	{
 		printf("Configuration complete. Number of devs=%d:\n", ndevs);
-		for (i=0; i<ndevs; i++) {
-			s = &devs[i];
-			printf("Device %s (on %s)\n", s->name, s->ison);
+		for (s = devs; s != NIL ; s = s->next)
+		{
+			printf("Device %s (on %s)\n", s->name, s->device);
 			printf("    csr=0x%04x, irq=0x%04x, minor=%d\n",
-				s->csr, s->irq, s->minor);
+			       s->csr, s->irq, s->minor);
 		}
 	}
 }
 
-/************************************************************************/
-/*									*/
-/* addattr - add a new attribute spec to current type/device description*/
-/*		tok: token type (attribute type)			*/
-/*		val: symbol number of value				*/
-/*									*/
-/************************************************************************/
-
-void	addattr(int tok, int val) {
-	struct dev_ent *s;
-	char *c;
-
-	if (brkcount == 0) {
-		/* Doing types */
-		s = &dtypes[ntypes-1];
-	} else {
-		/* Doing devices */
-		s = &devs[ndevs-1];
-	}
-
-	switch (tok) {
-	case CSR:	s->csr = val;			break;
-	case IRQ:	s->irq = val;			break;
-	case INTR:	strcpy(s->intr, saveattrid);	break;
-	case READ:	strcpy(s->read, saveattrid);	break;
-	case WRITE:	strcpy(s->write,saveattrid);	break;
-	case GETC:	strcpy(s->getc, saveattrid);	break;
-	case PUTC:	strcpy(s->putc, saveattrid);	break;
-	case OPEN:	strcpy(s->open, saveattrid);	break;
-	case CLOSE:	strcpy(s->close,saveattrid);	break;
-	case INIT:	strcpy(s->init, saveattrid);	break;
-	case SEEK:	strcpy(s->seek, saveattrid);	break;
-	case CONTROL:	strcpy(s->control,saveattrid);	break;
-	default:	fprintf(stderr, "Internal error 1\n");
-	}
+void yyerror(char *s)
+{
+	fprintf(stderr, "Syntax error in %s on line %d\n", doing, linectr);
 }
 
+/* lookup  --  lookup a name in the symbol table; return position */
+int lookup(char *str, int len)
+{
+	int   i;
+	char *s;
 
-/************************************************************************/
-/*									*/
-/* addton -- add an "on XXX" to the current type			*/
-/*									*/
-/************************************************************************/
-
-int	addton(char *tonid) {
-	int	currtype;		/* The current type		*/
-
-	if (strlen(tonid) >= MAXNAME) {
-		fprintf(stderr,"string %s is too long on line %d\n",
-				tonid, linectr);
-		exit(1);
+	if (len >= CONFMAXNM)
+	{
+		len = CONFMAXNM-1;
+		fprintf(stderr, "warning: name %s truncated\n", str);
 	}
-	currtype = ntypes - 1;
-	strcpy(dtypes[currtype].ison, tonid);
 
-	return currtype;
+	s = (char *)malloc(len + 1);
+	strncpy(s, str, len);
+	s[len] = '\0';
+
+	for (i = 0; i < nsym; i++)
+	{
+		if ( strncmp(s, symtab[i].name, CONFMAXNM) == 0 )
+		{ return(i); }
+	}
+
+	symtab[nsym].name = s;
+	symtab[nsym].occurs = 0;
+
+	return nsym++;
 }
 
-
-/************************************************************************/
-/*									*/
-/* config_atoi - convert an ascii string of text to an integer,		*/
-/*			honoring octal, decimal, and hex		*/
-/*									*/
-/************************************************************************/
-
-int	config_atoi(char *p, int len) {
+int config_atoi(char *p, int len)
+{
 	int base, rv;
 
 	if (*p == '0')
@@ -2048,214 +1985,185 @@ int	config_atoi(char *p, int len) {
 	return rv;
 }
 
-/************************************************************************/
-/*									*/
-/* devisid -- add an "is XXX" to the current device			*/
-/*									*/
-/************************************************************************/
+/* newattr -- add a new attribute spec to current type/device description */
+/* tok: token type (attribute type) */
+/* val: symbol number of value      */
+void newattr(int tok, int val)
+{
+	struct dev_ent *s;
+	char *c;
 
-void	devisid(char *tname) {
-	int	currdev;		/* The current device		*/
-	int	i;
+	/* doing types */
+	if (devs == NIL) { s = currtype; }
+	else             { s = lastdv; }
 
-	if (strlen(tname) >= MAXNAME) {
-		fprintf(stderr,"string %s is too long on line %d\n",
-				tname, linectr);
-		exit(1);
+	if (val>=0 && val<nsym)
+	{
+		c = symtab[val].name;
+		if (strnlen(c, CONFMAXNM) == CONFMAXNM )
+		{
+			fprintf(stderr, "Internal overflow\n");
+			exit(1);
+		}
 	}
-	/* Verify the type exists */
+	else
+	{ c = NULL; }
 
-	for (i=0; i<ntypes; i++) {
-		if (strcmp(tname, dtypes[i].tname) == 0) {
+	switch (tok)
+	{
+	case CSR:     s->csr = val;                      break;
+	case IRQ:     s->irq = val;                      break;
+	case INTR:    strncpy(s->intr,    c, CONFMAXNM); break;
+	case READ:    strncpy(s->read,    c, CONFMAXNM); break;
+	case WRITE:   strncpy(s->write,   c, CONFMAXNM); break;
+	case GETC:    strncpy(s->getc,    c, CONFMAXNM); break;
+	case PUTC:    strncpy(s->putc,    c, CONFMAXNM); break;
+	case OPEN:    strncpy(s->open,    c, CONFMAXNM); break;
+	case CLOSE:   strncpy(s->close,   c, CONFMAXNM); break;
+	case INIT:    strncpy(s->init,    c, CONFMAXNM); break;
+	case SEEK:    strncpy(s->seek,    c, CONFMAXNM); break;
+	case CONTROL: strncpy(s->control, c, CONFMAXNM); break;
+	default:      fprintf(stderr, "Internal error 1\n");
+	}
+}
+
+/* cktname  --  check type name for duplicates */
+int cktname(int symid)
+{
+	struct dev_ent *s;
+	char *name;
+
+	name = symtab[symid].name;
+	for (s = ftypes; s != NIL; s = s->next)
+	{
+		if (s->tname == name)
+		{
+			fprintf(stderr, "Duplicate type name %s on line %d\n",
+			        name, linectr);
+			exit(1);
+		}
+	}
+
+	return symid;
+}
+
+/* mktype  --  make a node in the type list and initialize to defaults */
+void mktype(int deviceid)
+{
+	struct dev_ent *s, *p;
+	char *tn, *dn;
+
+	p = NIL;
+	tn = symtab[currtname].name;
+	dn = symtab[deviceid].name;
+	for (s = ftypes; s != NIL ; s = s->next)
+	{
+		if (s->tname == tn && s->device==dn)
+		{
+			fprintf(stderr, "Duplicate device %s for type %s on line %d\n",
+			        dn, tn, linectr);
+			exit(1);
+		}
+		p = s;
+	}
+
+	currtype = s = (struct dev_ent *)malloc(sizeof(struct dev_ent));
+	if (ftypes != NIL) { p->next = s; }
+	else               { ftypes = s; }
+
+	initattr(s, currtname, deviceid);
+}
+
+/* initialize attributes in a type declaration node to typename... */
+void initattr(struct dev_ent *fstr, int tnum, int deviceid)
+{
+	fstr->name = NULL;
+	fstr->tname = symtab[tnum].name;
+	fstr->tnum = tnum;
+	fstr->device = symtab[deviceid].name;
+	fstr->csr = 0;
+	fstr->irq = 0;
+	strncpy(fstr->intr,    "ioerr", 5);
+	strncpy(fstr->init,    "ioerr", 5);
+	strncpy(fstr->open,    "ioerr", 5);
+	strncpy(fstr->close,   "ioerr", 5);
+	strncpy(fstr->read,    "ioerr", 5);
+	strncpy(fstr->write,   "ioerr", 5);
+	strncpy(fstr->control, "ioerr", 5);
+	strncpy(fstr->seek,    "ioerr", 5);
+	strncpy(fstr->getc,    "ioerr", 5);
+	strncpy(fstr->putc,    "ioerr", 5);
+	fstr->minor = 0;
+}
+
+/* mkdev  --  make a node on the device list */
+void mkdev(int nameid, int typid, int deviceid)
+{
+	struct dev_ent *s;
+	char *devn, *tn, *dn;
+	int   found;
+
+	s = (struct dev_ent *)malloc(sizeof(struct dev_ent));
+	s->next = NIL;
+	if (devs == NIL)
+	{
+		devs = s;
+		lastdv = s;
+	}
+	else
+	{
+		lastdv->next = s;
+		lastdv = s;
+	}
+
+	ndevs++;
+	tn = symtab[typid].name;
+	devn = symtab[nameid].name;
+
+	if (deviceid >= 0) { dn = symtab[deviceid].name; }
+	else               { dn = NULL; }
+
+	found = 0;
+	for (s = ftypes; s != NULL ; s = s->next)
+	{
+		if (s->tname == tn && (dn == NULL || s->device == dn))
+		{
+			memcpy(lastdv, s, sizeof(struct dev_ent));
+			found = 1;
 			break;
 		}
 	}
-	if (i >= ntypes) {
-		fprintf(stderr, "Illegal type name %s on line %d\n",
-				tname, linectr);
+
+	if (found==0)
+	{
+		fprintf(stderr,
+		        "Bad type or device name in declaration of %s on line %d\n",
+		        devn, linectr);
 		exit(1);
 	}
-	currdev = ndevs - 1;
-	strcpy(devs[currdev].tname, tname);
 
-	return;
+	lastdv->next = NIL;
+	lastdv->name = devn;
 }
 
 
-/************************************************************************/
-/*									*/
-/* devonid -- add an "on XXX" to the current device, lookup the type,	*/
-/*		and copy attributes into the device from the type	*/
-/*									*/
-/************************************************************************/
+/* chdname  -- check for duplicate device name */
+int ckdname(int devid)
+{
+	struct dev_ent *s;
+	char *name;
 
-void	devonid(char *onname) {
-	int	currdev;		/* The current device		*/
-	int	i;
-	struct	dev_ent	*dptr;		/* Pointer to current device	*/
-	struct	dev_ent	*tptr;		/* Pointer to a type		*/
-	char	tmp[MAXNAME];		/* Holds the device name during	*/
-					/*   copy			*/
+	name = symtab[devid].name;
 
-	if (strlen(onname) >= MAXNAME) {
-		fprintf(stderr,"string %s is too long on line %d\n",
-				onname, linectr);
-		exit(1);
-	}
-	if (ndevs <=0) {
-		fprintf(stderr,"Internal error 3\n");
-		exit(1);
-	}
-	currdev = ndevs - 1;
-	dptr = &devs[currdev];
-
-	strcpy(dptr->ison, onname);
-
-	/* Lookup the device type */
-
-	for (i=0; i<ntypes; i++) {
-		tptr = &dtypes[i];
-		if ( (strcmp(dptr->tname,tptr->tname) == 0 ) &&
-		     (strcmp(dptr->ison, tptr->ison)  == 0 )  ){
-
-			/* The specified type matches the ith entry, so	*/
-			/*  set all attributes equal to the ones in the	*/
-			/*  type definition.				*/
-
-			strcpy(tmp, dptr->name);
-			bcopy (tptr, dptr, sizeof(struct dev_ent));
-			/* Increment the minor device number for the	*/
-			/*  next time the type is used			*/
-			tptr->minor++;
-			strcpy(dptr->name, tmp);
-			return;
-		}
-	}
-
-	fprintf(stderr, "Ileagal device specification on line %d\n", linectr);
-	exit(1);
-}
-
-
-/************************************************************************/
-/*									*/
-/* getattrid -- pick up and save the attribute string from an id	*/
-/*									*/
-/************************************************************************/
-
-void	getattrid(char *str) {
-
-	if (strlen(str) >= MAXNAME) {
-		fprintf(stderr,"atribute string %s is too long on line %d\n",
-				str, linectr);
-		exit(1);
-	}
-	strcpy(saveattrid, str);
-	return;
-}
-
-
-/************************************************************************/
-/*									*/
-/* newdev -- allocate an entry in devs, initialize, and fill in the name*/
-/*									*/
-/************************************************************************/
-
-void	newdev(char *name) {
-
-	struct	dev_ent	*dptr;		/* Ptr. to an entry in devs	*/
-	int	i;
-
-	if (ndevs >= NDEVS) {
-		fprintf(stderr,"Too many devices on line %d", linectr);
-		exit(1);
-	}
-	if (strlen(name) >= MAXNAME) {
-		fprintf(stderr,"Device name %s is too long on line %d\n",
-				name, linectr);
-		exit(1);
-	}
-
-	/* Verify that the device name is unique */
-
-	for (i=0; i<ndevs; i++) {
-		if (strcmp(name, devs[i].name) == 0) {
+	for (s = devs; s != NIL; s = s->next)
+	{
+		if (s->name == name)
+		{
 			fprintf(stderr, "Duplicate device name %s on line %d\n",
-				name, linectr);
+			        name, linectr);
 			exit(1);
 		}
 	}
 
-	dptr = &devs[ndevs];
-
-	/* Initialize fields in the entry */
-
-	bzero((void *)dptr, sizeof(struct dev_ent));
-	strcpy(dptr->name,	 name);
-	ndevs++;
-	return;
-}
-
-
-/************************************************************************/
-/*									*/
-/* newtype -- allocate an entry in the type array and fill in the name	*/
-/*									*/
-/************************************************************************/
-
-int	newtype(char *name) {
-
-	struct	dev_ent	*dptr;		/* Ptr. to an entry in dtypes	*/
-	int	i;			/* Index into the type table	*/
-
-	if (ntypes >= NTYPES) {
-		fprintf(stderr,"Too many types on line %d", linectr);
-		exit(1);
-	}
-	if (strlen(name) >= MAXNAME) {
-		fprintf(stderr,"Type name %s is too long on line %d\n",
-				name, linectr);
-		exit(1);
-	}
-
-	/* Verify that the type name is unique */
-
-	for (i=0; i<ntypes; i++) {
-		if (strcmp(name, dtypes[i].tname) == 0) {
-			fprintf(stderr, "Duplicate type name %s on line %d\n",
-				name, linectr);
-			exit(1);
-		}
-	}
-
-	dptr = &dtypes[ntypes];
-
-	/* Initialize fields in the entry */
-
-	bzero((void *)dptr, sizeof(struct dev_ent));
-	strcpy(dptr->tname,	 name);
-	strncpy(dptr->intr,	"ioerr", 5);
-	strncpy(dptr->init,	"ioerr", 5);
-	strncpy(dptr->open,	"ioerr", 5);
-	strncpy(dptr->close,	"ioerr", 5);
-	strncpy(dptr->read,	"ioerr", 5);
-	strncpy(dptr->write,	"ioerr", 5);
-	strncpy(dptr->control,	"ioerr", 5);
-	strncpy(dptr->seek,	"ioerr", 5);
-	strncpy(dptr->getc,	"ioerr", 5);
-	strncpy(dptr->putc,	"ioerr", 5);
-
-	return ntypes++;
-}
-
-
-/************************************************************************/
-/*									*/
-/* yyerror - print an error message with the line number		*/
-/*									*/
-/************************************************************************/
-
-void yyerror(char *s) {
-
-	fprintf(stderr, "Syntax error in %s on line %d\n", doing, linectr);
+	return devid;
 }

@@ -24,6 +24,7 @@ typedef	uint32	intmask;	/* saved interrupt mask			*/
 typedef	int32	ibid32;		/* index block ID (used in file system)	*/
 typedef	int32	dbid32;		/* data block ID (used in file system)	*/
 typedef	int32	uid32;		/* ID for UDP table descriptor		*/
+typedef uint16	topic16;	/* Lab03 - topic 			*/
 
 /* Function declaration return types */
 
@@ -71,3 +72,6 @@ extern	qid16	readylist;	/* global ID for list of ready processes*/
 syscall	kprintf(char *fmt, ...);
 syscall	kputc(byte);
 syscall	kgetc(void);
+
+/* Lab03 Callback */
+typedef void (*handler)(topic16 topic, void* data, uint32 size);

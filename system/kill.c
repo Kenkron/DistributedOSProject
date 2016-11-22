@@ -13,6 +13,8 @@ syscall	kill(
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	procent *prptr;		/* Ptr to process's table entry	*/
 	int32	i;			/* Index into descriptors	*/
+	int32 	j;			/*iterator			*/
+	struct topic* topicentry; 	/*Topic holder			*/ 
 
 	mask = disable();
 	if (isbadpid(pid) || (pid == NULLPROC)
@@ -53,6 +55,8 @@ syscall	kill(
 	default:
 		prptr->prstate = PR_FREE;
 	}
+	
+	
 
 	restore(mask);
 	return OK;

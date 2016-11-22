@@ -6,6 +6,15 @@
 #define	NPROC		8
 #endif		
 
+/* Inbox conf, Lab02 */
+#define NINBOX		1
+#define NMAXMSGS	10
+#define MSGSIZE		sizeof(struct ientry)
+#define	TOTALMSGS	(int32) 100
+#define	DEFAULT_MSG	999
+#define	MSGSLEEP	1
+extern sid32	printsem;
+
 /* Process state constants */
 
 #define	PR_FREE		0	/* Process table entry is unused	*/
@@ -52,6 +61,11 @@ struct procent {		/* Entry in the process table		*/
 	umsg32	prmsg;		/* Message sent to this process		*/
 	bool8	prhasmsg;	/* Nonzero iff msg is valid		*/
 	int16	prdesc[NDESC];	/* Device descriptors for process	*/
+	
+	bool8	prhasmsgs;	/* Other messages sent to this process	*/
+	sid32	prinboxputsem;	/* Semaphore for empty spots in inbox	*/
+	sid32	prinboxgetsem; 	/* Semaphore for num mesgs in inbox	*/
+	struct ientry *prinboxhead;	/* Address to first struct in head 	*/
 };
 
 /* Marker for the top of a process stack (used to help detect overflow)	*/
@@ -60,3 +74,17 @@ struct procent {		/* Entry in the process table		*/
 extern	struct	procent proctab[];
 extern	int32	prcount;	/* Currently active processes		*/
 extern	pid32	currpid;	/* Currently executing process		*/
+
+/* lab03 */
+
+struct topic {
+	uint32 num_subscribers;	/*number of subscribers to topic	*/
+	handler callbacks[NSUBSCRIBERS];	/* pointers to process callback function addresses */
+	pid32 pids[NSUBSCRIBERS]; /*all pids subscribed			*/
+	topic16 group_ids[NSUBSCRIBERS]; /*all group IDs in same loc as pid */
+	struct pubentry *pubhead;	/* Address of next pub  	*/
+	sid32	pubputsem;	/* Semaphore for empty spots in inbox	*/
+	sid32	pubgetsem; 	/* Semaphore for num mesgs in inbox	*/
+};
+
+extern struct topic topicstab[];

@@ -1,3 +1,13 @@
+
+extern devcall gpioingetc(struct dentry*);
+extern devcall gpioinputc(struct dentry*,bool8 turnon);
+extern devcall gpioininit(struct dentry*);
+extern devcall gpiooutgetc(struct dentry*);
+extern devcall gpiooutputc(struct dentry*,bool8 turnon);
+extern devcall gpiooutinit(struct dentry*);
+extern devcall gpioangetc(struct dentry*);
+extern devcall gpioanputc(struct dentry*);
+extern devcall gpioaninit(struct dentry*);
 /* in file addargs.c */
 extern	status	addargs(pid32, int32, int32[], int32,char *, void *);
 

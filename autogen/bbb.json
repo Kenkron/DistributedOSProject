@@ -1,0 +1,79 @@
+{
+    "Platform":"BBB",
+    "gpio": [
+        {
+        "gpioin": {
+            "Digital":
+            {
+                        "Header":"P8",
+                        "Block":"GPIO0",
+                        "BASE":"0x44e07000",
+                        "OFFSET_DATADIR":"0x138",
+                        "Head_pin": [
+                        {
+                                "Pin":"19",
+                                "gpio":"22"
+                        },
+                        {
+                                "Pin":"17",
+                                "gpio":"27"
+                        },
+                        {
+                                "Pin":"13",
+                                "gpio":"23"
+                        }
+                                     ]
+            }
+        }
+        },
+    {
+    "gpioout": {
+        "Digital":
+        {
+                    "Header":"P8",
+                    "Block":"GPIO0",
+                    "BASE":"0x44e07000",
+                    "OFFSET_DATADIR":"0x13C",
+                    "OFFSET_OE":"0x134",
+                    "Head_pin": [
+                    {
+                            "Pin":"19",
+                            "gpio":"22"
+                    },
+                    {
+                            "Pin":"17",
+                            "gpio":"27"
+                    },
+                    {
+                                "Pin":"13",
+                                "gpio":"23"
+                    }
+                                 ]
+        }
+    }
+    },
+    {
+    "gpioan": {
+        "Analog":
+        {
+                    "Header":"P8",
+                    "Block":"GPIO0",
+                    "BASE":"0x44e07000",
+                    "OFFSET_DATAOUT":"0x13C",
+                    "OFFSET_DATAIN":"0x138",
+                    "OFFSET_DATADIRECT":"0x134",
+                    "Head_pin": [
+                    {
+                            "Pin":"19",
+                            "gpio":"22"
+                    },
+                    {
+                            "Pin":"21",
+                            "gpio":"30"
+                    }
+                                 ]
+        }
+    }
+    }
+    ]
+}

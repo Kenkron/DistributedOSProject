@@ -25,32 +25,34 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 
 /* Device name definitions */
 
-#define CONSOLE              0	/* type tty      */
-#define NULLDEV              1	/* type null     */
-#define ETHER0               2	/* type eth      */
-#define NAMESPACE            3	/* type nam      */
-#define RDISK                4	/* type rds      */
-#define RAM0                 5	/* type ram      */
-#define RFILESYS             6	/* type rfs      */
-#define RFILE0               7	/* type rfl      */
-#define RFILE1               8	/* type rfl      */
-#define RFILE2               9	/* type rfl      */
-#define RFILE3              10	/* type rfl      */
-#define RFILE4              11	/* type rfl      */
-#define RFILE5              12	/* type rfl      */
-#define RFILE6              13	/* type rfl      */
-#define RFILE7              14	/* type rfl      */
-#define RFILE8              15	/* type rfl      */
-#define RFILE9              16	/* type rfl      */
-#define LFILESYS            17	/* type lfs      */
-#define LFILE0              18	/* type lfl      */
-#define LFILE1              19	/* type lfl      */
-#define LFILE2              20	/* type lfl      */
-#define LFILE3              21	/* type lfl      */
-#define LFILE4              22	/* type lfl      */
-#define LFILE5              23	/* type lfl      */
-#define SPI0                24	/* type spi      */
-#define SPI1                25	/* type spi      */
+#define CONSOLE     0       /* type tty      */
+#define NULLDEV     1       /* type null     */
+#define ETHER0      2       /* type eth      */
+#define NAMESPACE   3       /* type nam      */
+#define RDISK       4       /* type rds      */
+#define RAM0        5       /* type ram      */
+#define RFILESYS    6       /* type rfs      */
+#define RFILE0      7       /* type rfl      */
+#define RFILE1      8       /* type rfl      */
+#define RFILE2      9       /* type rfl      */
+#define RFILE3      10       /* type rfl      */
+#define RFILE4      11       /* type rfl      */
+#define RFILE5      12       /* type rfl      */
+#define RFILE6      13       /* type rfl      */
+#define RFILE7      14       /* type rfl      */
+#define RFILE8      15       /* type rfl      */
+#define RFILE9      16       /* type rfl      */
+#define LFILESYS    17       /* type lfs      */
+#define LFILE0      18       /* type lfl      */
+#define LFILE1      19       /* type lfl      */
+#define LFILE2      20       /* type lfl      */
+#define LFILE3      21       /* type lfl      */
+#define LFILE4      22       /* type lfl      */
+#define LFILE5      23       /* type lfl      */
+#define SPI0        24       /* type spi      */
+#define SPI1        25       /* type spi      */
+#define LED         26       /* type gpioout  */
+#define PUSHBTN     27       /* type gpioin   */
 
 /* Control block sizes */
 
@@ -65,17 +67,44 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 #define	Nlfl	6
 #define	Nnam	1
 #define	Nspi	2
+#define	Ngpioin	1
+#define	Ngpioout	1
 
-#define NDEVS 26
+#define DEVMAXNAME 24
+#define NDEVS 28
 
 
 /* Configuration and Size Constants */
 
 #define	NPROC	     100	/* number of user processes		*/
+
 #define	NSEM	     100	/* number of semaphores			*/
+
 #define	IRQBASE	     32		/* base ivec for IRQ0			*/
+
 #define	IRQ_TIMER    IRQ_HW5	/* timer IRQ is wired to hardware 5	*/
+
 #define	IRQ_ATH_MISC IRQ_HW4	/* Misc. IRQ is wired to hardware 4	*/
+
 #define CLKFREQ      200000000	/* 200 MHz clock			*/
 
+/* Lab 03 */
+
+#define NTOPICS		255	/* max number of topics		        */
+
+#define	NGROUPS		255	/* max number of groups			*/
+
+#define NSUBSCRIBERS	8	/* max number of subscribers		*/
+
+#define MAXPENDING	BP_MAXN	/* max number of pending to be published*/
+
+#define PUBLISHSIZE	sizeof(struct pubentry)
+
+extern bpid32 	INBOX_ID;
+
+extern bpid32	PPUBLISH_ID;
+
+extern sid32	printsem;
+
 #define	LF_DISK_DEV	RAM0
+
