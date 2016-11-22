@@ -21,6 +21,15 @@ struct	procent	proctab[NPROC];	/* Process table			*/
 struct	sentry	semtab[NSEM];	/* Semaphore table			*/
 struct	memblk	memlist;	/* List of free memory blocks		*/
 
+/* Declarations of MQTT stuff */
+
+struct	topicentry 	topictab[NTOPICS*NGROUPS];			/* Topic table					*/
+	pid32		topicpidtab[NTOPICS*NGROUPS*NSUBS];		/* Table storing each topic's 8 possible pids	*/
+	void (*topichantab[NTOPICS*NGROUPS*NSUBS])(topic16, uint32);	/* Table to store handlers 			*/
+sid32 	brokersem;						/* Semaphore for broker				*/
+
+
+
 /* Active system status */
 
 int	prcount;		/* Total number of live processes	*/
@@ -80,7 +89,7 @@ void	nulluser()
 
 	/* Initialize the network stack and start processes */
 
-	/* net_init(); */
+	net_init();
 
 	/* Create a process to finish startup and start main */
 
@@ -95,7 +104,6 @@ void	nulluser()
 	}
 
 }
-
 
 /*------------------------------------------------------------------------
  *
@@ -125,12 +133,17 @@ local process	startup(void)
 		kprintf("Obtained IP address  %s   (0x%08x)\n", str,
 								ipaddr);
 	}
+
+	/* Initialize mqttsn */
+	mqttsn_init();
+
 	/* Create a process to execute function main() */
 
 	resume(create((void *)main, INITSTK, INITPRIO,
 					"Main process", 0, NULL));
 
 	/* Startup process exits at this point */
+	
 
 	return OK;
 }
@@ -147,6 +160,7 @@ static	void	sysinit()
 	int32	i;
 	struct	procent	*prptr;		/* Ptr to process table entry	*/
 	struct	sentry	*semptr;	/* Ptr to semaphore table entry	*/
+	struct 	topicentry *topptr;	/* Ptr to topic table entry	*/
 
 	kprintf(CONSOLE_RESET);
 	kprintf("\n%s\n\n", VERSION);
@@ -202,6 +216,20 @@ static	void	sysinit()
 		semptr->scount = 0;
 		semptr->squeue = newqueue();
 	}
+
+	/* Initialize mqtt stuff */
+
+	for (i = 0; i < (NTOPICS*NGROUPS); i++) {
+		topptr = &topictab[i];
+		topptr->tstate = T_FREE;
+	}
+
+	for (i = 0; i < (NTOPICS*NGROUPS*NSUBS); i++) {
+		topicpidtab[i] = -1;
+		topichantab[i] = 0;
+	}
+
+	brokersem = semcreate(0);
 
 	/* Initialize buffer pools */
 

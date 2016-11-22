@@ -40,3 +40,10 @@
 #include <am335x_eth.h>
 #include <am335x_watchdog.h>
 #include <armv7a.h>
+#include <MQTTSNPacket.h>
+#include <MQTTSNConnect.h>
+#include <MQTTSNPublish.h>
+#include <MQTTSNSearch.h>
+#include <MQTTSNSubscribe.h>
+#include <MQTTSNUnsubscribe.h>
+#include <MQTTSN.h>
