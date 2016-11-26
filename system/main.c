@@ -10,6 +10,8 @@ extern syscall turn_light_on(did32);
 local process pushbtn(void);
 local process status_print(void);
 local process led(void);
+local process temp(void);
+extern process TestTemp(void);
 
 sid32 psem; /*print sem*/
 
@@ -64,9 +66,18 @@ process	led(void)
 	return OK;
 }
 
+/*NOTE: Process polls the temperature (gettemp)*/
+process	temp(void)
+{
+	while(TRUE) {
+		sleep(1);
+		wait(psem);
+		kprintf("Temperature: %d c\n",gettemp());
+		signal(psem);
+	}
+}
+
 process main(void) {
-
-
 	recvclr();
 	kprintf("Starting LED and PUSHBTN demo...\n");
 	
@@ -74,11 +85,13 @@ process main(void) {
 	pid32 led_id = create(led,4096,50,"led",0);
 	pid32 btn_id = create(pushbtn,4096,50,"btn",0);
 	pid32 status_id = create(status_print,4096,50,"status",0);
-
+	pid32 temp_id = create(temp,4096,50,"temp",1,psem);
+	
 	resched_cntl(DEFER_START);
 	resume(led_id);
 	resume(btn_id);
 	resume(status_id);
+	resume(temp_id);
 	resched_cntl(DEFER_STOP);
 
 	return OK;
