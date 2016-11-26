@@ -1,0 +1,8 @@
+{
+    "type": "led",
+    "publishes": [],
+    "subscribes": [
+        "#/temperature"
+    ],
+    "description": "An LED that lights up when a temperature reading is sent."
+}

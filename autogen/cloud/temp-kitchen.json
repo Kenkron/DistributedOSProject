@@ -1,0 +1,11 @@
+{
+    "type": "temperature",
+    "publishes": [
+        "home/kitchen/temperature"
+    ],
+    "subscribes": [
+        "home/kitchen/temperature/force-update"
+    ],
+    "description": "A simple temperature sensor. Publishes temperature readings
+periodically, or when a subscribed message is received."
+}
