@@ -567,6 +567,15 @@ extern	devcall	ttyread(struct dentry *, char *, int32);
 /* in file ttywrite.c */
 extern	devcall	ttywrite(struct dentry *, char *, int32);
 
+/* in file tempinit.c */
+extern	devcall	tempinit(struct dentry *);
+
+/* in file tempread.c */
+extern	devcall	tempread(struct dentry *, char *, int32);
+
+/* in file temp.c */
+extern	int32	gettemp();
+
 /* in file udp.c */
 
 extern	void	udp_init(void);
