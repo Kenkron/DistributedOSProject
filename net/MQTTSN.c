@@ -6,10 +6,13 @@
 #define BROKER_IP "192.168.1.129"
 #define BROKER_PORT 1977
 
-
+#define DEVICE_UUID "bf2fa17f-b298-47f2-9191-b6a787d11980"
+#define DEVICE_UUID_LENGTH 36
+#define DEVICE_DESCRIPTION "{\"type\": \"temperature\", \"publishes\": [\"home/bedroom/temperature\"], \"subscribes\": [], \"description\": \"A publish-only temperature sensor. The message content sent is the temperature itself.\"}"
+#define DEVICE_DESCRIPTION_LENGTH 203
 
 #define MQTTSN_PORT 9835
-#define MAX_PACKET_SIZE 200
+#define MAX_PACKET_SIZE 512
 #define DEFAULT_TIMEOUT_SEC 30
 #define BROKER_SLEEP_MSEC 100
 
@@ -27,6 +30,10 @@ sid32 socket_sem;
 int32 process_mqttsn(uint32);
 int32 waitfor(int32 msg_type);
 process local_broker();
+uid32 mqttsn_willtopic(MQTTSNString, uint8);
+uid32 mqttsn_willmsg(MQTTSNString);
+uid32 mqttsn_negotiate_will(void);
+void mqttsn_describe(void);
 
 void mqttsn_init(void) {
 	MQTTSNPacket_connectData options = MQTTSNPacket_connectData_initializer;
@@ -39,13 +46,15 @@ void mqttsn_init(void) {
 	unsigned short dummy_short;
 	unsigned char* dummy_str;
 
+    options.willFlag = 1;
+
 	kprintf("Initializing mqttsn subsystem.\n");
 
 	/* Create semaphore */
 	socket_sem = semcreate(1);
 
 	/* Initialize sub slots */
-	for (lv = 0; lv < MQTTSN_SLOTS; lv++) 
+	for (lv = 0; lv < MQTTSN_SLOTS; lv++)
 	{
 		mqttsntab[lv].used = 0;
 	}
@@ -87,31 +96,78 @@ void mqttsn_init(void) {
 	kprintf("Connecting to broker.\n");
 	/* Connect to broker */
 	len = MQTTSNSerialize_connect(sendbuf, MAX_PACKET_SIZE, &options);
-	if (len <= 0) 
+	if (len <= 0)
 		panic("Error serializing MQTTSN connect");
-	
+
 	kprintf("Sending connect packet.\n");
 	res = udp_send(broker_slot, (char *) sendbuf, len);
-	if (res == SYSERR) 
+	if (res == SYSERR)
 		panic("Error flushing MQTTSN connect");
 
-	
+    mqttsn_negotiate_will();
 	kprintf("Waiting for CONNACK.\n");
 	// wait for connectack:
 	xinu_res = waitfor(MQTTSN_CONNACK);
-	if (xinu_res == SYSERR) 
+	if (xinu_res == SYSERR)
 		panic("Didn't receive CONNACK in within default timeout.");
 
-	
+
 	kprintf("Got CONNACK, verifying.\n");
 	// readbuf now has connack, deserialize and make sure OK
 	if (MQTTSNDeserialize_connack(&xinu_res, readbuf, MAX_PACKET_SIZE) != 1)
 		panic("Received malformed CONNACK.");
 
-	
+    kprintf("Publishing device description.\n");
+    mqttsn_describe();
+
+    kprintf("Setting up will.\n");
+
 	/* Create the local broker process */
 
 	resume(create(local_broker, NETSTK, NETPRIO, "local_broker", 0, NULL));
+}
+
+/* publishes the device description to `iot/device/:UUID` */
+void mqttsn_describe(void) {
+  MQTTSN_topicid dd_topic, added_topic;
+  dd_topic.type = 0;
+  dd_topic.data.long_.name = "iot/device/status/"DEVICE_UUID;
+  dd_topic.data.long_.len = strlen(dd_topic.data.long_.name);
+  mqttsn_publish(dd_topic, (unsigned char*)DEVICE_DESCRIPTION, DEVICE_DESCRIPTION_LENGTH, 1);
+
+  added_topic.type = 0;
+  added_topic.data.long_.name = "iot/device/added";
+  added_topic.data.long_.len = strlen(added_topic.data.long_.name);
+  mqttsn_publish(dd_topic, (unsigned char*)DEVICE_UUID, DEVICE_UUID_LENGTH, 0);
+}
+
+uid32 mqttsn_negotiate_will(void) {
+  MQTTSNString topic = MQTTSNString_initializer, msg = MQTTSNString_initializer;
+  int32 status;
+
+  status = waitfor(MQTTSN_WILLTOPICREQ);
+  if (status == SYSERR) {
+    panic("Didn't receive WILLTOPICREQ message within the timeout.\n");
+  }
+
+  topic.cstring = "iot/device/died";
+
+  if(mqttsn_willtopic (topic, 0) == SYSERR) {
+    panic("Failed to set will topic.\n");
+  }
+
+  status = waitfor(MQTTSN_WILLMSGREQ);
+  if(status == SYSERR) {
+    panic("Didn't receive WILLMSGSEQ message within the timeout.\n");
+  }
+
+  msg.cstring = DEVICE_UUID;
+
+  if(mqttsn_willmsg(msg) == SYSERR) {
+    panic("Failed to set will message.\n");
+  }
+
+  return OK;
 }
 
 // return SYSERR on fail
@@ -128,7 +184,7 @@ int32 waitfor(int32 msg_type) {
 		if (res == msg_type) {
 			return msg_type;
 		}
-		
+
 		// otherwise check timeout
 		cur_clk = clktime;
 		if ((cur_clk-start_clk) >= DEFAULT_TIMEOUT_SEC) {
@@ -198,8 +254,8 @@ int32 process_mqttsn(uint32 timeout) {
 			// TODO: ping response...
 			break;
 		// missing register (unused), regack (unused), and pubrec (qos2)
-	}
-	return packet_type;
+    }
+    return packet_type;
 }
 
 process local_broker() {
@@ -213,7 +269,7 @@ process local_broker() {
 }
 
 uid32	mqttsn_subscribe (
-	MQTTSN_topicid* topic, 
+	MQTTSN_topicid* topic,
 	void (*handler) (MQTTSN_topicid, unsigned char * data, int32 datalen)
 	)
 {
@@ -222,7 +278,7 @@ uid32	mqttsn_subscribe (
 	unsigned short packId;
 	unsigned short topId;
 	static unsigned short nextId = 0;
-		
+
 	wait(socket_sem);
 
 	/* Find unused slot */
@@ -232,10 +288,10 @@ uid32	mqttsn_subscribe (
 		{
 			break;
 		}
-	}	
-	
+	}
+
 	/* No slots left for subscribers */
-	if (slot == MQTTSN_SLOTS) 
+	if (slot == MQTTSN_SLOTS)
 	{
 		signal(socket_sem);
 		return SYSERR;
@@ -250,7 +306,7 @@ uid32	mqttsn_subscribe (
 	{
 		signal(socket_sem);
 		return SYSERR;
-	}	
+	}
 
 
 	/* Send the packet */
@@ -261,7 +317,7 @@ uid32	mqttsn_subscribe (
 	}
 
 	res = waitfor(MQTTSN_SUBACK);
-	if (res == SYSERR) 
+	if (res == SYSERR)
 	{
 		signal(socket_sem);
 		return SYSERR;
@@ -277,10 +333,10 @@ uid32	mqttsn_subscribe (
 	{
 		signal(socket_sem);
 		return SYSERR;
-	}		
+	}
 
 	// if we arent using short names, set topic id to the accepted one
-	if (topic->type != 2) 
+	if (topic->type != 2)
 	{
 		topic->data.id = topId;
 	}
@@ -298,16 +354,17 @@ uid32	mqttsn_subscribe (
 // topic can only use topicid or shortname.
 // if longname, register a topicid
 uid32	mqttsn_publish (
-	MQTTSN_topicid topic, 
-	unsigned char * data, 
-	int32 datalen
+	MQTTSN_topicid topic,
+	unsigned char * data,
+	int32 datalen,
+    uint8 retain
 	)
 {
 	int32 len, res;
 	wait(socket_sem);
-	
+
 	/* Create packet */
-	len = MQTTSNSerialize_publish(sendbuf, MAX_PACKET_SIZE, 0, 0, 0, 0, topic, data, datalen);
+	len = MQTTSNSerialize_publish(sendbuf, MAX_PACKET_SIZE, 0, 0, retain, 0, topic, data, datalen);
 	if (len <= 0) {
 		signal(socket_sem);
 		return SYSERR;
@@ -323,7 +380,48 @@ uid32	mqttsn_publish (
 	// TODO: IF WE USE QOS1, WAITFOR PUBACK
 
 	signal(socket_sem);
-	return SYSERR;
+	return OK;
 }
 
+uid32 mqttsn_willtopic(
+  MQTTSNString topic,
+  uint8 retain
+  ) {
+  int32 len, res;
+  wait(socket_sem);
 
+  len = MQTTSNSerialize_willtopic(sendbuf, MAX_PACKET_SIZE, 0, retain, topic);
+  if (len <= 0) {
+    signal(socket_sem);
+    return SYSERR;
+  }
+
+  res = udp_send(broker_slot, (char*)sendbuf, len);
+  if (res == SYSERR) {
+    signal(socket_sem);
+    return SYSERR;
+  }
+
+  signal(socket_sem);
+  return OK;
+}
+
+uid32 mqttsn_willmsg(MQTTSNString msg) {
+  int32 len, res;
+  wait(socket_sem);
+
+  len = MQTTSNSerialize_willmsg(sendbuf, MAX_PACKET_SIZE, msg);
+  if (len <= 0) {
+    signal(socket_sem);
+    return SYSERR;
+  }
+
+  res = udp_send(broker_slot, (char*)sendbuf, len);
+  if (res == SYSERR) {
+    signal(socket_sem);
+    return SYSERR;
+  }
+
+  signal(socket_sem);
+  return OK;
+}
