@@ -105,75 +105,6 @@ void clearReg(uint32* reg, uint32 val){
 	(*reg) &= val;
 }
 
-syscall inittemp(){
-	//9   SW steps are not pre-empted by hardware events
-	//8   Default event mapping
-	//7   Touchscreen disabled
-	//6-5 Default AFTe Pen Ctrl Inputs
-	//4   AFE is powered up
-	//3   ADC uses internal bias
-	//2   Setup configuration registers are protected (not writable)
-	//1   Don't store StepID
-	//0   Enable TSC_ADC_SS
-	/*MOV r10,0x44E0D040 //target address: CTRL register
-//described in TRM section 12.5.1.10
-MOV r12,0x00000005 //set bit 0 = TSC_ADC_SS enable
-//and bit 2 = Step conf. registers writeable
-SBBO r12,r10,0,4 //store value of r12 in the CTRL register
-MOV r12,0xFFFFFFFF //reset r12 to confirm that the followin load
-//operation works
-LBBO r12,r10,0,12 //Load value from CTRL register to r10
-//The C host programm will echo the value of r10*/
-
-	uint32 tmp = disable();	
-	kprintf("inittemp:\n");
-
-	kprintf("write 2 to CM_WAKEUP_ADDR+BBIO_CM_WKUP_OFFSET_FROM_CM_PER:\n");
-	*(uint32*)(CM_WAKEUP_ADDR+BBIO_CM_WKUP_OFFSET_FROM_CM_PER) = 0x2;
-	kprintf("attempting to write to ");
-	printHex(TSC_ADC_CTRL);
-	kprintf(":\n");
-	setReg(TSC_ADC_CTRL, 0x04);
-	kprintf("...done\n");
-	//writeReg(REVISION, 0x0);
-	kprintf("attempting to write to anything adc 2: ");
-	//writeReg(SYSCONFIG, 0x0);
-
-	
-	kprintf("initializing step configuration registers: \n");
-	
-
-	
-	writeReg(STEPCONFIG1, 0x4000000);
-	writeReg(STEPCONFIG2, 0x00);
-	writeReg(STEPCONFIG3, 0x00);
-	writeReg(STEPCONFIG4, 0x00);
-	writeReg(STEPCONFIG5, 0x00);
-	writeReg(STEPCONFIG6, 0x00);
-	writeReg(STEPCONFIG7, 0x00);
-	writeReg(STEPCONFIG8, 0x00);
-	writeReg(STEPCONFIG9, 0x00);
-	writeReg(STEPCONFIG10, 0x00);
-	writeReg(STEPCONFIG11, 0x00);
-	writeReg(STEPCONFIG12, 0x00);
-	writeReg(STEPCONFIG13, 0x00);
-	writeReg(STEPCONFIG14, 0x00);
-	writeReg(STEPCONFIG15, 0x00);
-	writeReg(STEPCONFIG16, 0x00);
-	kprintf("If you're reading this, step configuration is done. 8D\n");
-
-	setReg(TSC_ADC_CTRL, 0x01);
-
-	kprintf("..enabed TSC_ADC_SS module");
-	
-	writeReg(TSC_ADC_CTRL, 0x05);
-	//setReg(STEPENABLE, 0b10);
-	//setReg(STEPCONFIG1, 0x00);
-	
-	restore(tmp);
-	return OK;
-}
-
 #define OE_ADDR 0x134
 #define GPIO_DATAOUT 0x13C
 #define GPIO_DATAIN 0x138
@@ -204,7 +135,7 @@ process TestTemp(sid32 printMutex){
 	kprintf("setting gpio to input (as a control)\n");
 	setReg(0x44E07134, 0xFFFFFFFF);
 	kprintf("...done\n");
-	inittemp();
+	//inittemp();
 	kprintf("setting gpio to input\n");
 	writeReg(0x44E07134, 0xFFFFFFFF);
 	kprintf("starting to get temp:\n");
@@ -221,6 +152,10 @@ process TestTemp(sid32 printMutex){
 	return OK;
 }
 
-uint32 gettemp(){
-	return ((uint32*)FIFO0DATA)[0];
+int32 gettemp(){
+	//25-35		=10
+	//1740-1940	=200
+	//87-97
+	//-62
+	return (readReg(FIFO0DATA)+1250)/20;
 }
