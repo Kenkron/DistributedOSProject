@@ -9,10 +9,6 @@ extern syscall turn_light_on(did32);
 
 local process pushbtn(void);
 
-#ifndef BTN_JSON
-#define BTN_JSON "{\"name\" : \"push_btn\", \"value\": \"1\"}"
-#endif
-
 MQTTSN_topicid topic;
 
 /*NOTE: Process checks to see if button is pressed. Checks two functions: if_pressed() and button_status()*/
@@ -20,8 +16,7 @@ process pushbtn(void) {
 	/*PUSHBTN=push button, found in config/config.h */
 	while(TRUE) {
 		if (if_pressed((did32) PUSHBTN)) {
-			char payload[] = BTN_JSON;
-			mqttsn_publish (topic, BTN_JSON, 35);
+			mqttsn_publish (topic, "1", 1);
 			sleep(2);
 		}
 	}
