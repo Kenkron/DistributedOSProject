@@ -34,7 +34,7 @@ process main(void) {
 	topic.type = 0;
 	topic.data.long_.name = "home/bedroom/btn";
 	topic.data.long_.len = 16;
-
+	mqttsn_register(&topic);
 
 	recvclr();
 
