@@ -6,10 +6,10 @@
 #define BROKER_IP "192.168.1.129"
 #define BROKER_PORT 1977
 
-#define DEVICE_UUID "bf2fa17f-b298-47f2-9191-b6a787d11980"
+#define DEVICE_UUID "9FBE1B9C-D129-4F62-A33E-6B20B09C34F6"
 #define DEVICE_UUID_LENGTH 36
-#define DEVICE_DESCRIPTION "{\"type\": \"temperature\", \"publishes\": [\"home/bedroom/temperature\"], \"subscribes\": [], \"description\": \"A publish-only temperature sensor. The message content sent is the temperature itself.\"}"
-#define DEVICE_DESCRIPTION_LENGTH 203
+#define DEVICE_DESCRIPTION "{\"type\": \"button\", \"publishes\": [ \"#/force-update\" ], \"subscribes\": [], \"description\": \"A simple publish-only button that forces any subscribed sensors tosend updated data.\"}"
+#define DEVICE_DESCRIPTION_LENGTH 188
 
 #define MQTTSN_PORT 9835
 #define MAX_PACKET_SIZE 512
