@@ -4,7 +4,7 @@
 void mqttsn_init(void);
 
 uid32	mqttsn_subscribe (MQTTSN_topicid* topic, void (*handler) (MQTTSN_topicid topic, unsigned char * data, int32 datalen));
-uid32	mqttsn_publish (MQTTSN_topicid topic, unsigned char * data, int32 datalen);
+uid32	mqttsn_publish (MQTTSN_topicid topic, unsigned char * data, int32 datalen, uint8 retain);
 
 
 
