@@ -2,14 +2,11 @@
 
 #include <xinu.h>
 #include <string.h>
+#include <cloudddl.h>
 
 #define BROKER_IP "192.168.1.129"
 #define BROKER_PORT 1977
 
-#define DEVICE_UUID "bf2fa17f-b298-47f2-9191-b6a787d11980"
-#define DEVICE_UUID_LENGTH 36
-#define DEVICE_DESCRIPTION "{\"type\": \"temperature\", \"publishes\": [\"home/bedroom/temperature\"], \"subscribes\": [], \"description\": \"A publish-only temperature sensor. The message content sent is the temperature itself.\"}"
-#define DEVICE_DESCRIPTION_LENGTH 203
 
 #define MQTTSN_PORT 9835
 #define MAX_PACKET_SIZE 512
