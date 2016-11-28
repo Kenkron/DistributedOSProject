@@ -206,6 +206,14 @@ gpioan:
 		-w ionull	-s ionull	-n ionull
 		-intr ionull
 
+
+/* type of temp device */
+temp:
+	on adc
+		-i tempinit	-o ionull	-c ionull
+		-r tempread	-g tempread	-p ioerr
+		-w ioerr	-s ionull
+
 %%
 
 /* Actual device declarations that each give the name of a device that	*/
@@ -290,6 +298,9 @@ LED is gpioout on top csr 0x44e0713c -irq 22
 
 PUSHBTN is gpioin on top csr 0x44e07138 -irq 27
 
+   /* Define temperature device to be a temp*/
+   TEMP is temp on adc csr 0x44e0D000 -irq 0
+   
 %%
 
 /* Configuration and Size Constants */
@@ -308,7 +319,7 @@ PUSHBTN is gpioin on top csr 0x44e07138 -irq 27
 
 /* Lab 03 */
 
-#define NTOPICS		255	/* max number of topics		        */
+#define NTOPICS		255	/* max number of topics			*/
 
 #define	NGROUPS		255	/* max number of groups			*/
 

@@ -48,7 +48,10 @@ process	main(void)
 	/*Start MQTT listen loop*/
 	pid32 led_id = create(led,4096,50,"led",0);
 	resume(led_id);
-
- 	return OK;
-    
 }
+void handler2(MQTTSN_topicid topic, unsigned char * data, int32 datalen)
+{
+	kprintf("GOT SOME DATA!!!! WITH LEN: %d\n", datalen);
+	return;
+}
+

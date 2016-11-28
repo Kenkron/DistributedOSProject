@@ -12,6 +12,7 @@
 #define MAX_PACKET_SIZE 512
 #define DEFAULT_TIMEOUT_SEC 30
 #define BROKER_SLEEP_MSEC 100
+#define KEEPALIVE_DURATION 120
 
 #define DEFAULT_TIMEOUT_MSEC DEFAULT_TIMEOUT_SEC*1000
 
@@ -27,10 +28,21 @@ sid32 socket_sem;
 int32 process_mqttsn(uint32);
 int32 waitfor(int32 msg_type);
 process local_broker();
+process keepalive();
 uid32 mqttsn_willtopic(MQTTSNString, uint8);
 uid32 mqttsn_willmsg(MQTTSNString);
 uid32 mqttsn_negotiate_will(void);
 void mqttsn_describe(void);
+
+MQTTSNString mkmstr(char* str) {
+  MQTTSNString s = {str, {strlen(str), str}};
+  return s;
+}
+
+MQTTSNString mkmnstr(char* str, uint32 len) {
+  MQTTSNString s = {str, {len, str}};
+  return s;
+}
 
 void mqttsn_init(void) {
 	MQTTSNPacket_connectData options = MQTTSNPacket_connectData_initializer;
@@ -43,6 +55,9 @@ void mqttsn_init(void) {
 	unsigned short dummy_short;
 	unsigned char* dummy_str;
 
+    char* uuid = DEVICE_UUID;
+    options.clientID = mkmstr(&uuid[19]);
+    options.duration = KEEPALIVE_DURATION;
     options.willFlag = 1;
 
 	kprintf("Initializing mqttsn subsystem.\n");
@@ -131,10 +146,9 @@ void mqttsn_init(void) {
     kprintf("Publishing device description.\n");
     mqttsn_describe();
 
-    kprintf("Setting up will.\n");
-
 	/* Create the local broker process */
 
+    resume(create(keepalive, NETSTK, NETPRIO, "keepalive", 0, NULL));
 	resume(create(local_broker, NETSTK, NETPRIO, "local_broker", 0, NULL));
 }
 
@@ -144,12 +158,14 @@ void mqttsn_describe(void) {
   dd_topic.type = 0;
   dd_topic.data.long_.name = "iot/device/status/"DEVICE_UUID;
   dd_topic.data.long_.len = strlen(dd_topic.data.long_.name);
+  mqttsn_register(&dd_topic);
   mqttsn_publish(dd_topic, (unsigned char*)DEVICE_DESCRIPTION, DEVICE_DESCRIPTION_LENGTH, 1);
 
   added_topic.type = 0;
   added_topic.data.long_.name = "iot/device/added";
   added_topic.data.long_.len = strlen(added_topic.data.long_.name);
-  mqttsn_publish(dd_topic, (unsigned char*)DEVICE_UUID, DEVICE_UUID_LENGTH, 0);
+  mqttsn_register(&added_topic);
+  mqttsn_publish(added_topic, (unsigned char*)DEVICE_UUID, DEVICE_UUID_LENGTH, 0);
 }
 
 uid32 mqttsn_negotiate_will(void) {
@@ -161,7 +177,7 @@ uid32 mqttsn_negotiate_will(void) {
     panic("Didn't receive WILLTOPICREQ message within the timeout.\n");
   }
 
-  topic.cstring = "iot/device/died";
+  topic = mkmstr("iot/device/died");
 
   if(mqttsn_willtopic (topic, 0) == SYSERR) {
     panic("Failed to set will topic.\n");
@@ -172,7 +188,7 @@ uid32 mqttsn_negotiate_will(void) {
     panic("Didn't receive WILLMSGSEQ message within the timeout.\n");
   }
 
-  msg.cstring = DEVICE_UUID;
+  msg = mkmstr(DEVICE_UUID);
 
   if(mqttsn_willmsg(msg) == SYSERR) {
     panic("Failed to set will message.\n");
@@ -246,6 +262,8 @@ int32 process_mqttsn(uint32 timeout) {
 		case MQTTSN_PUBACK:
 		case MQTTSN_SUBACK:
 			break;
+		case MQTTSN_REGACK:
+			break;
 		case MQTTSN_PUBLISH:
 			if (MQTTSNDeserialize_publish(&dup, &qos, &retained, &packetId, &topicid, &payload, &payloadLen, readbuf, MAX_PACKET_SIZE) != 1)
 			{
@@ -267,6 +285,37 @@ int32 process_mqttsn(uint32 timeout) {
 		// missing register (unused), regack (unused), and pubrec (qos2)
     }
     return packet_type;
+}
+
+uid32 ping() {
+  uint32 len = 0, res = 0;
+  wait(socket_sem);
+  len = MQTTSNSerialize_pingreq(sendbuf, MAX_PACKET_SIZE, mkmstr(&(DEVICE_UUID[19])));
+
+  /* Send the packet */
+  res = udp_send(broker_slot, (char *) sendbuf, len);
+  if (res == SYSERR) {
+    signal(socket_sem);
+    return SYSERR;
+  }
+
+  res = waitfor(MQTTSN_PINGRESP);
+  if (res == SYSERR)
+  {
+    kprintf("Did not receive ping response from broker\n");
+    signal(socket_sem);
+    return SYSERR;
+  }
+  signal(socket_sem);
+  return OK;
+}
+
+process keepalive() {
+  while(1) {
+    ping();
+    sleep(KEEPALIVE_DURATION);
+  }
+  return OK;
 }
 
 process local_broker() {
@@ -352,10 +401,65 @@ uid32	mqttsn_subscribe (
 		topic->data.id = topId;
 	}
 
-	/* Fill mqttsntab */
-	mqttsntab[slot].used = 1;
-	mqttsntab[slot].handler = handler;
-	mqttsntab[slot].topic = *topic;
+	signal(socket_sem);
+	return OK;
+}
+
+// expects a long name
+// after this call works, the "topic" will have
+// the appropriate topic id (if OK is returned)
+uid32	mqttsn_register (
+	MQTTSN_topicid* topic
+	)
+{
+	int32 len, res;
+	unsigned char rc;
+	unsigned short packId;
+	unsigned short topId;
+	static unsigned short nextId = 0;
+
+	wait(socket_sem);
+
+	nextId++;
+	if (nextId >= 65536) nextId = 1;
+
+	/* Create register packet */
+    MQTTSNString topic_str = mkmnstr(topic->data.long_.name, topic->data.long_.len);
+	len = MQTTSNSerialize_register(sendbuf, MAX_PACKET_SIZE, 0, nextId, &topic_str);
+	if (len <= 0)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	/* Send the packet */
+	res = udp_send(broker_slot, (char *) sendbuf, len);
+	if (res == SYSERR) {
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	res = waitfor(MQTTSN_REGACK);
+	if (res == SYSERR)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	if (MQTTSNDeserialize_regack(&topId, &packId, &rc, readbuf, MAX_PACKET_SIZE) != 1)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	if (rc != MQTTSN_RC_ACCEPTED)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	// set topic id to the registered one
+	topic->data.id = topId;
 
 	signal(socket_sem);
 	return OK;
