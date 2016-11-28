@@ -13,7 +13,7 @@ MQTTSN_topicid topic;
 
 sid32 psem; /*print sem*/
 
-char temperature_string[32];
+unsigned char temperature_string[32];
 
 /*NOTE: Process polls the temperature (gettemp)*/
 process	temp(void)
@@ -21,7 +21,7 @@ process	temp(void)
 	while(TRUE) {
 		sleep(5);
 		wait(psem);
-		sprintf(temperature_string,"%d",gettemp());
+		sprintf((char*)temperature_string,"%d",gettemp());
 		mqttsn_publish (topic, temperature_string, 32, 0);
 		kprintf("Temperature: %d c\n",gettemp());
 		signal(psem);
@@ -29,8 +29,9 @@ process	temp(void)
 }
 
 process main(void) {
+	kprintf("main...\n");
 	topic.type = 0;
-	topic.data.long_.name = "home/bedroom/temp";
+	topic.data.long_.name = "home/temp";
 	topic.data.long_.len = 17;
 	mqttsn_register(&topic);
 	
