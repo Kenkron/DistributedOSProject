@@ -1,0 +1,11 @@
+{
+    "type": "temperature",
+    "publishes": [
+        "office/lab/temperature"
+    ],
+    "subscribes": [
+        "office/lab/temperature/force-update"
+    ],
+    "description": "A simple temperature sensor. Publishes temperature readings
+periodically, or when a subscribed message is received."
+}
