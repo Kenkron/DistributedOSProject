@@ -2,6 +2,7 @@
 
 #include <xinu.h>
 #include <string.h>
+#include <cloudddl.h>
 
 #define BROKER_IP "192.168.1.129"
 #define BROKER_PORT 1977
@@ -80,7 +81,7 @@ void mqttsn_init(void) {
       if (res == SYSERR)
       {
         panic("Error reading packet from broadcast slot.");
-      } else {
+      } else if(res == TIMEOUT) {
         sleep(10);
         continue; // TIMEOUT -- continue trying to connect to broker
       }
