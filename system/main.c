@@ -30,9 +30,9 @@ process	temp(void)
 
 process main(void) {
 	kprintf("main...\n");
-	topic.type = 0;
+	topic.type = 1;
 	topic.data.long_.name = "home/temp";
-	topic.data.long_.len = 17;
+	topic.data.long_.len = 9;
 	mqttsn_register(&topic);
 	
 	recvclr();
