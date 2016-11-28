@@ -8,29 +8,24 @@ sid32 psem; /*print sem*/
 MQTTSN_topicid topic;
 
 /*NOTE: Process checks turn_light_off() and turn_light_on() and light_status()*/
-process	led(void)
+void led(MQTTSN_topicid topic, unsigned char * data, int32 datalen)
 {
-	/*LED=led, found in config/config.h */
-	while(TRUE) {
-		sleep(10);
-		if (/*how do i receive message from a topic*/){
-			kprintf("Temp sensor published. Light LED");
-			turn_light_on((did32) LED);
-			kprintf("Light Status: %d\n",light_status((did32) LED));
-			sleep(1);
-			turn_light_off((did32) LED);
-			kprintf("Light Status: %d\n",light_status((did32) LED));
-			sleep(1);
-			turn_light_on((did32) LED);
-			kprintf("Light Status: %d\n",light_status((did32) LED));
-			sleep(1);
-			turn_light_off((did32) LED);
-			kprintf("Light Status: %d\n",light_status((did32) LED));
-		}
-	}
-
-	return OK;
+	kprintf("GOT SOME DATA!!!! WITH LEN: %d\n", datalen);
+	kprintf("Temp sensor published. Light LED");
+	turn_light_on((did32) LED);
+	kprintf("Light Status: %d\n",light_status((did32) LED));
+	sleep(1);
+	turn_light_off((did32) LED);
+	kprintf("Light Status: %d\n",light_status((did32) LED));
+	sleep(1);
+	turn_light_on((did32) LED);
+	kprintf("Light Status: %d\n",light_status((did32) LED));
+	sleep(1);
+	turn_light_off((did32) LED);
+	kprintf("Light Status: %d\n",light_status((did32) LED));
+	return;
 }
+
 
 process	main(void)
 { 
@@ -45,13 +40,9 @@ process	main(void)
 	sleep(5);
 	turn_light_off((did32) LED);
 
-	/*Start MQTT listen loop*/
-	pid32 led_id = create(led,4096,50,"led",0);
-	resume(led_id);
-}
-void handler2(MQTTSN_topicid topic, unsigned char * data, int32 datalen)
-{
-	kprintf("GOT SOME DATA!!!! WITH LEN: %d\n", datalen);
-	return;
+	mqttsn_register(&topic);
+
+	mqttsn_subscribe(&topic, &led);
+	return OK;
 }
 
