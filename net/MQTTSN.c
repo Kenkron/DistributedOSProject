@@ -246,6 +246,8 @@ int32 process_mqttsn(uint32 timeout) {
 		case MQTTSN_PUBACK:
 		case MQTTSN_SUBACK:
 			break;
+		case MQTTSN_REGACK:
+			break;
 		case MQTTSN_PUBLISH:
 			if (MQTTSNDeserialize_publish(&dup, &qos, &retained, &packetId, &topicid, &payload, &payloadLen, readbuf, MAX_PACKET_SIZE) != 1)
 			{
@@ -352,10 +354,64 @@ uid32	mqttsn_subscribe (
 		topic->data.id = topId;
 	}
 
-	/* Fill mqttsntab */
-	mqttsntab[slot].used = 1;
-	mqttsntab[slot].handler = handler;
-	mqttsntab[slot].topic = *topic;
+	signal(socket_sem);
+	return OK;
+}
+
+// expects a long name
+// after this call works, the "topic" will have
+// the appropriate topic id (if OK is returned)
+uid32	mqttsn_register (
+	MQTTSN_topicid* topic
+	)
+{
+	int32 len, res;
+	unsigned char rc;
+	unsigned short packId;
+	unsigned short topId;
+	static unsigned short nextId = 0;
+
+	wait(socket_sem);
+
+	nextId++;
+	if (nextId >= 65536) nextId = 1;
+
+	/* Create register packet */
+	len = MQTTSNSerialize_register(sendbuf, MAX_PACKET_SIZE, 0, nextId, topic);
+	if (len <= 0)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	/* Send the packet */
+	res = udp_send(broker_slot, (char *) sendbuf, len);
+	if (res == SYSERR) {
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	res = waitfor(MQTTSN_REGACK);
+	if (res == SYSERR)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	if (MQTTSNDeserialize_regack(&topId, &packId, &rc, readbuf, MAX_PACKET_SIZE) != 1)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	if (rc != MQTTSN_RC_ACCEPTED)
+	{
+		signal(socket_sem);
+		return SYSERR;
+	}
+
+	// set topic id to the registered one
+	topic->data.id = topId;
 
 	signal(socket_sem);
 	return OK;
