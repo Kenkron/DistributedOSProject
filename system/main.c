@@ -16,7 +16,7 @@ process pushbtn(void) {
 	/*PUSHBTN=push button, found in config/config.h */
 	while(TRUE) {
 		if (if_pressed((did32) PUSHBTN)) {
-			mqttsn_publish (topic, "1", 1);
+			mqttsn_publish (topic, "1", 1, 0);
 			sleep(2);
 		}
 	}
