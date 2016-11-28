@@ -53,6 +53,7 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 #define SPI1        25       /* type spi      */
 #define LED         26       /* type gpioout  */
 #define PUSHBTN     27       /* type gpioin   */
+#define TEMP        28       /* type temp     */
 
 /* Control block sizes */
 
@@ -69,9 +70,10 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 #define	Nspi	2
 #define	Ngpioin	1
 #define	Ngpioout	1
+#define	Ntemp	1
 
 #define DEVMAXNAME 24
-#define NDEVS 28
+#define NDEVS 29
 
 
 /* Configuration and Size Constants */
@@ -90,7 +92,7 @@ extern	struct	dentry	devtab[]; /* one entry per device */
 
 /* Lab 03 */
 
-#define NTOPICS		255	/* max number of topics		        */
+#define NTOPICS		255	/* max number of topics			*/
 
 #define	NGROUPS		255	/* max number of groups			*/
 

@@ -130,6 +130,15 @@ extern	status	getutime(uint32 *);
 /* in file halt.S */
 extern	void	halt(void);
 
+/* in file tempinit.c */
+extern	devcall	tempinit(struct dentry *);
+
+/* in file tempread.c */
+extern	devcall	tempread(struct dentry *, char *, int32);
+
+/* in file temp.c */
+extern	int32	gettemp();
+
 /* in file icmp.c */
 
 extern	void	icmp_init(void);

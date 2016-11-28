@@ -213,5 +213,12 @@ struct	dentry	devtab[NDEVS] =
 	  (void *)gpioininit, (void *)ionull, (void *)ionull,
 	  (void *)ionull, (void *)ionull, (void *)ionull,
 	  (void *)gpioingetc, (void *)gpioinputc, (void *)ionull,
-	  (void *)0x44e07138, (void *)ionull, 27 }
+	  (void *)0x44e07138, (void *)ionull, 27 },
+
+/* TEMP is temp */
+	{ 28, 0, "TEMP",
+	  (void *)tempinit, (void *)ionull, (void *)ionull,
+	  (void *)tempread, (void *)ioerr, (void *)ionull,
+	  (void *)tempread, (void *)ioerr, (void *)ioerr,
+	  (void *)0x44e0d000, (void *)ioerr, 0 }
 };
