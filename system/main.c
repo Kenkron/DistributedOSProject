@@ -43,9 +43,6 @@ process main(void) {
 	resched_cntl(DEFER_START);
 	resume(btn_id);
 
-	resume(status_id);
-	resume(temp_id);
-
 	resched_cntl(DEFER_STOP);
 }
 
