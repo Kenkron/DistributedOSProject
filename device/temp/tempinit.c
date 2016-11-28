@@ -78,6 +78,7 @@ devcall tempinit(
 		 struct dentry *devptr
 ){
 	kprintf("inittemp\n");
+	uint32 tmp = disable();
 	//configure clock (adc won't work without this)
 	*(uint32*)(CM_WAKEUP_ADDR+BBIO_CM_WKUP_OFFSET_FROM_CM_PER) = 0x2;
 	kprintf("set clock\n");
@@ -88,6 +89,7 @@ devcall tempinit(
 	*(uint32*)STEPCONFIG2 = 0x01;
 	//now enabling device
 	*(uint32*)TSC_ADC_CTRL |= 0x01;
+	restore(tmp);
 	kprintf("...inittemp done\n");
 	return OK;
 }

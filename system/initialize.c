@@ -122,7 +122,7 @@ local process	startup(void)
 	char	str[128];		/* String used to format output	*/
 	/* Use DHCP to obtain an IP address and format it */
 
-    kprintf("Obtaining ip address...\n");
+	kprintf("Obtaining ip address...\n");
 	ipaddr = getlocalip();
 	if ((int32)ipaddr == SYSERR) {
 		kprintf("Cannot obtain an IP address\n");
