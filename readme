@@ -1,0 +1,37 @@
+New Files / Folders:
+
+/autogen/:
+Includes all scripts and DDL files necessary for performing code generation
+
+/include/MQTTSN*.h:
+/net/MQTTSN*.c:
+Library functions for MQTT
+
+/include/button.h:
+/system/button.c:
+Contains functions for polling the status of a push button.
+
+/include/led.h:
+/system/led.c:
+Contains functions for polling the status and changing the status of an LED light.
+
+/include/prototypes.h:
+/system/gpioan.c:
+/system/gpioin.c:
+/system/gpioout.c:
+Contains low level functions specified in the Xinu Device Configuration spec file.
+
+/include/prototypes.h:
+/system/temp.c:
+Contains functions for polling the temperature read by a sensor
+
+Updated Files / Folders:
+
+/system/main.c:
+Driver process for running each individual BBB device. Each branch has a different main.c
+
+/system/initialize.c:
+Updated to perform MQTT initialization.
+
+/config/Configuration:
+Updated to add new sensors to the device table (temperature, LED, push button).
