@@ -25,6 +25,9 @@ Contains low level functions specified in the Xinu Device Configuration spec fil
 /system/temp.c:
 Contains functions for polling the temperature read by a sensor
 
+/include/cloudddl.h:
+Contains 'addresses' for each BBB device. 
+
 Updated Files / Folders:
 
 /system/main.c:
