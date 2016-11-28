@@ -8,6 +8,13 @@ extern syscall turn_light_off(did32);
 extern syscall turn_light_on(did32);
 
 local process pushbtn(void);
+<<<<<<< HEAD
+=======
+local process status_print(void);
+local process led(void);
+local process temp(void);
+extern process TestTemp(void);
+>>>>>>> master
 
 MQTTSN_topicid topic;
 
@@ -23,6 +30,7 @@ process pushbtn(void) {
 	return OK;
 }
 
+<<<<<<< HEAD
 
 process main(void) {
 	unsigned char data[2];
@@ -30,12 +38,76 @@ process main(void) {
 	topic.data.long_.name = "home/bedroom/btn";
 	topic.data.long_.len = 16;
 
+=======
+/*NOTE: Process checks to make sure button_status() will output '0' if btn NOT pressed*/
+process status_print(void){
+	while(TRUE) {
+		sleep(3);
+		uint32 btn_status = button_status((did32) PUSHBTN);
+		wait(psem);
+		kprintf("PUSHBTN status: %d\n",btn_status);
+		signal(psem);
+	}
+	return OK;
+}
+
+
+/*NOTE: Process checks turn_light_off() and turn_light_on() and light_status()*/
+process	led(void)
+{
+	/*LED=led, found in config/config.h */
+	while(TRUE) {
+		sleep(1);
+		turn_light_off((did32) LED);
+		wait(psem);
+		kprintf("Light Status: %d\n",light_status((did32) LED));
+		signal(psem);
+		sleep(1); /*sleep 2 seconds*/
+		turn_light_on((did32) LED);
+		wait(psem);
+		kprintf("Light Status: %d\n",light_status((did32) LED));
+		signal(psem);
+	}
+
+	return OK;
+}
+
+/*NOTE: Process polls the temperature (gettemp)*/
+process	temp(void)
+{
+	while(TRUE) {
+		sleep(1);
+		wait(psem);
+		kprintf("Temperature: %d c\n",gettemp());
+		signal(psem);
+	}
+}
+
+void handler2(MQTTSN_topicid topic, unsigned char * data, int32 datalen)
+{
+	kprintf("GOT SOME DATA!!!! WITH LEN: %d\n", datalen);
+	return;
+}
+
+process main(void) {
+>>>>>>> master
 	recvclr();
 
 	pid32 btn_id = create(pushbtn,4096,50,"btn",0);
+<<<<<<< HEAD
 
+=======
+	pid32 status_id = create(status_print,4096,50,"status",0);
+	pid32 temp_id = create(temp,4096,50,"temp",1,psem);
+	
+>>>>>>> master
 	resched_cntl(DEFER_START);
 	resume(btn_id);
+<<<<<<< HEAD
+=======
+	resume(status_id);
+	resume(temp_id);
+>>>>>>> master
 	resched_cntl(DEFER_STOP);
 }
 
