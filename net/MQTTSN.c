@@ -401,6 +401,10 @@ uid32	mqttsn_subscribe (
 		topic->data.id = topId;
 	}
 
+	mqttsntab[slot].used = 1;
+	mqttsntab[slot].handler = handler;
+	mqttsntab[slot].topic = *topic;
+
 	signal(socket_sem);
 	return OK;
 }
