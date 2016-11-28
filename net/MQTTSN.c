@@ -399,6 +399,7 @@ uid32	mqttsn_subscribe (
 	if (topic->type != 2)
 	{
 		topic->data.id = topId;
+		topic->type = 1;
 	}
 
 	mqttsntab[slot].used = 1;
@@ -464,6 +465,7 @@ uid32	mqttsn_register (
 
 	// set topic id to the registered one
 	topic->data.id = topId;
+	topic->type = 1;
 
 	signal(socket_sem);
 	return OK;
