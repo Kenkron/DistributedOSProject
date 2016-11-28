@@ -84,7 +84,7 @@ void mqttsn_init(void) {
       if (res == SYSERR)
       {
         panic("Error reading packet from broadcast slot.");
-      } else {
+      } else if(res == TIMEOUT) {
         sleep(10);
         continue; // TIMEOUT -- continue trying to connect to broker
       }
