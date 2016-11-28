@@ -64,30 +64,44 @@ void mqttsn_init(void) {
 	broadcast_slot = udp_register(0, BROKER_PORT, MQTTSN_PORT);
 	if (broadcast_slot == SYSERR) panic("Error creating MQTTSN broadcast slot");
 
-	/* Send searchGW broadcast */
-	kprintf("Sending searchgw broadcast.\n");
-	len = MQTTSNSerialize_searchgw(sendbuf, MAX_PACKET_SIZE, 1); // 1 = gw on immediate network
-	if (len <= 0)
-		panic("Error serializing MQTTSN searchgw");
-	res = udp_sendto(broadcast_slot, IP_BCAST, BROKER_PORT, (char *)sendbuf, len);
-	if (res == SYSERR)
-		panic("Error broadcasting searchgw.");
+    while(1) {
+      /* Send searchGW broadcast */
+      kprintf("Sending searchgw broadcast.\n");
+      len = MQTTSNSerialize_searchgw(sendbuf, MAX_PACKET_SIZE, 1); // 1 = gw on immediate network
+      if (len <= 0)
+      {
+        panic("Error serializing MQTTSN searchgw");
+      }
+      res = udp_sendto(broadcast_slot, IP_BCAST, BROKER_PORT, (char *)sendbuf, len);
+      if (res == SYSERR)
+      {
+        panic("Error broadcasting searchgw.");
+      }
 
-	/* Wait for infogw */
-	kprintf("Waiting for infogw response.\n");
-	res = udp_recvaddr(broadcast_slot, &gwIP, &gwPort, (char*) readbuf, MAX_PACKET_SIZE, DEFAULT_TIMEOUT_MSEC);
-	if (res == TIMEOUT)
-		panic("Didn't receive infogw within 30 seconds.");
-	if (res == SYSERR)
-		panic("Error reading packet from broadcast slot.");
+      /* Wait for infogw */
+      kprintf("Waiting for infogw response.\n");
+      res = udp_recvaddr(broadcast_slot, &gwIP, &gwPort, (char*) readbuf, MAX_PACKET_SIZE, DEFAULT_TIMEOUT_MSEC);
+      if (res == SYSERR)
+      {
+        panic("Error reading packet from broadcast slot.");
+      } else {
+        sleep(10);
+        continue; // TIMEOUT -- continue trying to connect to broker
+      }
 
-	/* Deserialize infogw and then we're good */
-	kprintf("Received a packet, making sure it's a gwinfo packet.\n");
-	len = MQTTSNDeserialize_gwinfo(&dummy_byte, &dummy_short, &dummy_str, readbuf, MAX_PACKET_SIZE);
-	if (len != 1)
-		panic("Error deserializing gwinfo packet.");
+      /* Deserialize infogw and then we're good */
+      kprintf("Received a packet, making sure it's a gwinfo packet.\n");
+      len = MQTTSNDeserialize_gwinfo(&dummy_byte, &dummy_short, &dummy_str, readbuf, MAX_PACKET_SIZE);
+      if (len != 1)
+      {
+        kprintf("Error deserializing gwinfo packet.");
+        continue;
+      } else {
+        kprintf("Correctly received broadcast from IP %d.\n", gwIP);
+        break;
+      }
+    }
 
-	kprintf("Correctly received broadcast from IP %d.\n", gwIP);
 
 	udp_release(broadcast_slot);
 	broker_slot = udp_register(gwIP, BROKER_PORT, MQTTSN_PORT);
