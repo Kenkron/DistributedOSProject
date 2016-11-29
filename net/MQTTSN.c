@@ -330,10 +330,8 @@ process keepalive() {
 process local_broker() {
 	kprintf("Initialized local broker.\n");
 	while (1) {
-		//wait(socket_sem);
 		process_mqttsn(1);
 		sleepms(BROKER_SLEEP_MSEC);
-		//signal(socket_sem);
 	}
 }
 
@@ -433,9 +431,6 @@ uid32	mqttsn_register (
 	static unsigned short nextId = 0;
 
 	wait(socket_sem);
-
-	nextId++;
-	if (nextId >= 65536) nextId = 1;
 
 	/* Create register packet */
     MQTTSNString topic_str = mkmnstr(topic->data.long_.name, topic->data.long_.len);
