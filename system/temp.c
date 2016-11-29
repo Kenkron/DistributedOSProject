@@ -5,5 +5,6 @@
 int32 gettemp(){
 	struct	dentry	*devptr;
 	devptr = (struct dentry *) &devtab[TEMP];
-	return ((devptr->dvread)(devptr, NULL, 0)-1250)/20;
+	uint32 raw = (devptr->dvread)(devptr, NULL, 0);
+	return (raw-1250)/20;
 }

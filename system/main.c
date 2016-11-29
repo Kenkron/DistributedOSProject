@@ -46,13 +46,13 @@ process btn_temp(void) {
 process main(void) {
   kprintf("main...\n");
   topic.type = 0;
-  topic.data.long_.name = "home/temp";
-  topic.data.long_.len = 9;
+  topic.data.long_.name = "home/bedroom/temp";
+  topic.data.long_.len = 17;
   mqttsn_register(&topic);
 
   btn_topic.type = 0;
-  btn_topic.data.long_.name = "home/btn";
-  btn_topic.data.long_.len = 8;
+  btn_topic.data.long_.name = "home/bedroom/btn";
+  btn_topic.data.long_.len = 16;
 
   mqttsn_register(&btn_topic);
   mqttsn_subscribe(&btn_topic, &btn_handler);
