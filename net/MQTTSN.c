@@ -243,7 +243,6 @@ int32 process_mqttsn(uint32 timeout) {
 	int32 qos;
 	unsigned short packetId;
 
-	wait(socket_sem);
 	// read packet
 	len = udp_recv(broker_slot, (char*) readbuf, MAX_PACKET_SIZE, timeout);
 	if (len == SYSERR) {
@@ -261,7 +260,6 @@ int32 process_mqttsn(uint32 timeout) {
 		signal(socket_sem);
 		return -1;
 	}
-	signal(socket_sem);
 	// process packet
 	packet_type = readbuf[res];
 	//kprintf("id: %d, pa\n", topicid.data.id);
@@ -330,7 +328,9 @@ process keepalive() {
 process local_broker() {
 	kprintf("Initialized local broker.\n");
 	while (1) {
+		wait(socket_sem);
 		process_mqttsn(1);
+		signal(socket_sem);
 		sleepms(BROKER_SLEEP_MSEC);
 	}
 }

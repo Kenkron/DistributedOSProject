@@ -62,8 +62,10 @@ process main(void) {
 
   btn_sem = semcreate(0);
   pid32 temp_id = create(temp,4096,50,"temp",1,NULL);
+  pid32 btn_temp_id = create(btn_temp,4096,50,"btn_temp",1,NULL);
 
   resched_cntl(DEFER_START);
   resume(temp_id);
+  resume(btn_temp_id);
   resched_cntl(DEFER_STOP);
 }
