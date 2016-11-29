@@ -243,19 +243,28 @@ int32 process_mqttsn(uint32 timeout) {
 	int32 qos;
 	unsigned short packetId;
 
+	wait(socket_sem);
 	// read packet
 	len = udp_recv(broker_slot, (char*) readbuf, MAX_PACKET_SIZE, timeout);
-	if (len == SYSERR)
+	if (len == SYSERR) {
+		signal(socket_sem);
 		return -1;
-	if (len == TIMEOUT)
+	}
+	if (len == TIMEOUT) {
+		signal(socket_sem);
 		return -1;
+	}
 
 	res = MQTTSNPacket_decode(readbuf, MAX_PACKET_SIZE, &actual_len);
 	if (actual_len != len)
+	{
+		signal(socket_sem);
 		return -1;
-
+	}
+	signal(socket_sem);
 	// process packet
 	packet_type = readbuf[res];
+	//kprintf("id: %d, pa\n", topicid.data.id);
 	switch (packet_type) {
 		// don't really need to process ACKs
 		case MQTTSN_CONNACK:
@@ -321,10 +330,10 @@ process keepalive() {
 process local_broker() {
 	kprintf("Initialized local broker.\n");
 	while (1) {
-		wait(socket_sem);
+		//wait(socket_sem);
 		process_mqttsn(1);
 		sleepms(BROKER_SLEEP_MSEC);
-		signal(socket_sem);
+		//signal(socket_sem);
 	}
 }
 

@@ -28,7 +28,7 @@ process	temp(void)
 {
 	while(TRUE) {
 		broadcast_temp(topic, temperature_string, 0);
-		sleep(5);
+		sleep(20);
 		kprintf("Scheduled publish: ");
 	}
 }
